@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "description": "Published reference values for non-parametric circadian rhythm analysis (NPCRA) indicators. Used for comparison against single-subject case reports.",
+  "sources_full_refs": "See BIBLIO.md",
+  "healthy_adults": {
+    "IS": {
+      "mean": 0.62,
+      "sd": 0.10,
+      "n": null,
+      "source": "Van Someren 1999"
+    },
+    "IV": {
+      "mean": 0.72,
+      "sd": 0.15,
+      "n": null,
+      "source": "Van Someren 1999"
+    },
+    "RA": {
+      "mean": 0.93,
+      "sd": 0.05,
+      "n": null,
+      "source": "Ortiz-Tudela 2010"
+    },
+    "CFI": {
+      "mean": 0.76,
+      "sd": 0.09,
+      "n": null,
+      "source": "Ortiz-Tudela 2010"
+    },
+    "M10_phase_hours": {
+      "mean": 14.2,
+      "sd": 1.1,
+      "n": null,
+      "source": "Witting 1990"
+    },
+    "L5_phase_hours": {
+      "mean": 3.1,
+      "sd": 0.8,
+      "n": null,
+      "source": "Witting 1990"
+    }
+  },
+  "N24_published_cases": {
+    "tau_hours": {
+      "range_min": 24.2,
+      "range_max": 25.5,
+      "source": "Sack 2007 + Lockley 1997"
+    },
+    "IS_typical": {
+      "threshold": 0.20,
+      "comparator": "less_than",
+      "source": "Hayakawa 2005"
+    },
+    "daily_phase_delay_minutes": {
+      "range_min": 12,
+      "range_max": 110,
+      "source": "Sack 2007"
+    }
+  },
+  "note": "All values are placeholder reference points sourced from review papers; the field 'n' is null where the original source did not provide a clean cohort size for the cited statistic. Treat as orienting ranges, not as ground truth — replace with cohort-specific values from healthy controls derived from public datasets (MESA Sleep, UK Biobank) in data/reference/healthy_controls.json once available."
+}
