@@ -1,0 +1,44 @@
+# History
+
+## Features
+
+| Feature | Files | Commit |
+|---------|-------|--------|
+| NPCRA tau estimation | `src/n24sal/npcra/tau.py`, `tests/test_npcra.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
+| NPCRA metrics (IS, IV, L5, M10, RA, CFI) | `src/n24sal/npcra/metrics.py`, `tests/test_npcra.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
+| Synthetic N24 cosinor fixture | `src/n24sal/synthetic.py`, `tests/test_synthetic.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
+| Portable actigraphy schema (Pydantic) | `src/n24sal/io/schemas.py`, `tests/test_schemas.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
+| Reference norms (healthy + N24) | `data/reference/norms.json` | [`64eb5a4`](#2026-05-29-64eb5a4) |
+| Project structure + pyproject (uv) | `pyproject.toml`, `src/n24sal/`, `data/`, `tests/`, `notebooks/`, `dashboard/` | [`56663c5`](#2026-05-29-56663c5) |
+| Root docs (vision, protocol CARE, biblio) | `README.md`, `VISION.md`, `PROTOCOL.md`, `BIBLIO.md`, `NOTES.md` | [`56663c5`](#2026-05-29-56663c5) |
+| Repo bootstrap (gitignore) | `.gitignore` | [`b0876e3`](#2026-05-29-b0876e3) |
+
+---
+
+## Changelog
+
+### 2026-05-29 `64eb5a4`
+feat: NPCRA pipeline (schema, synthetic cosinor, metrics IS/IV/L5/M10/RA/CFI, tau, tests)
+- Schéma portable `n24sal.io.schemas` — `SubjectMetadata` (Pydantic) + `validate_actigraphy_frame` indépendant de la source (Samsung / Actiwatch / GENEActiv / CamNtech)
+- Générateur de fixture synthétique `n24sal.synthetic.generate_synthetic_actigraphy` — cosinor free-running paramétré par `tau_hours`, tz-aware, reproductible
+- Implémentation NPCRA `n24sal.npcra.metrics` — `interdaily_stability`, `intradaily_variability`, `l5_m10`, `relative_amplitude`, `circadian_function_index` (formules Van Someren 1999 et Ortiz-Tudela 2010)
+- Estimation tau `n24sal.npcra.tau` — `m10_phases_per_day` + `estimate_tau` via régression linéaire sur phases M10 unwrapped, retourne intervalle de confiance via `linregress`
+- `data/reference/norms.json` — normes publiées healthy / N24 (Van Someren, Witting, Ortiz-Tudela, Sack, Hayakawa)
+- 33 tests unitaires GREEN — `pytest -q` en 1.4s
+- Tests couvrent : NaN propagation, signaux constants, comparaison N24 vs entrained, récupération de tau à ±0.2h pour synthétique tau=24.7 et tau=25.2
+
+### 2026-05-29 `56663c5`
+chore: scaffold docs (vision, protocol, biblio) and project structure
+- `README.md` — landing DataSaillance avec problème/solution/architecture/setup, lien vers Nightfall
+- `VISION.md` — angle "saillance" + triple objectif (publi / portfolio / vulgarisation) + phases de dev
+- `PROTOCOL.md` — préenregistrement style CARE checklist, hypothèses H1-H4 figées, limites assumées (N=1, pas DLMO, raw CamNtech indisponible)
+- `BIBLIO.md` — biblio living taggée (NPCRA, N24, wearable-validation, dataset-public, stats)
+- `NOTES.md` — backlog 6 phases + décisions d'architecture du 2026-05-29 (split Nightfall/n24-data-saillance, schéma portable)
+- `pyproject.toml` — package `n24sal` 0.0.1 uv-compatible, extras `viz`/`stats`/`dashboard`/`oracle`/`ml`/`dev`
+- Structure dossiers — `src/n24sal/{io,npcra,sleep,viz,models}/`, `data/{schemas,reference,synthetic,public,personal}/`, `notebooks/`, `dashboard/`, `tests/`, `docs/figures/` (gitkeep partout où vide)
+
+### 2026-05-29 `b0876e3`
+chore: bootstrap repo with gitignore
+- Initialisation du repo `n24-data-saillance` (greenfield, branche `main`)
+- `.gitignore` Python + venv + dossiers de données personnelles/publiques (ignorés par défaut, `.gitkeep` exposé)
+- Premier commit minimal avant scaffold complet sur branche `chore/scaffold-init`
