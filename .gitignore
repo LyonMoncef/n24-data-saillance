@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Venv
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_meta
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Data — never commit personal or downloaded research data
+data/personal/*
+!data/personal/.gitkeep
+data/public/*
+!data/public/.gitkeep
+data/synthetic/cache/
+*.parquet
+*.feather
+*.csv
+*.xlsx
+*.zip
+
+# Dashboard runtime
+dashboard/.streamlit/secrets.toml
+
+# Generated figures (kept selectively in docs/figures/)
+figures/cache/
+
+# Env
+.env
+.env.local
+.env.*.local
