@@ -52,3 +52,6 @@ figures/cache/
 .env
 .env.local
 .env.*.local
+
+# Claude Code — local settings only (settings.json is shareable)
+.claude/settings.local.json
