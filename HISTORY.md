@@ -4,7 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
-| Pivot personal-first (defer cohort to Phase 6) | `VISION.md`, `PROTOCOL.md`, `NOTES.md` | [`pending`](#2026-05-29-pivot) |
+| Pivot personal-first (defer cohort to Phase 6) | `VISION.md`, `PROTOCOL.md`, `NOTES.md` | [`54d0306`](#2026-05-29-54d0306) |
 | Gitignore local Claude Code settings | `.gitignore` | [`41b123e`](#2026-05-29-41b123e) |
 | NPCRA tau estimation | `src/n24sal/npcra/tau.py`, `tests/test_npcra.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
 | NPCRA metrics (IS, IV, L5, M10, RA, CFI) | `src/n24sal/npcra/metrics.py`, `tests/test_npcra.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
@@ -19,7 +19,7 @@
 
 ## Changelog
 
-### 2026-05-29 `pending`
+### 2026-05-29 `54d0306`
 docs: pivot to personal-first roadmap (defer cohort work to Phase 6)
 - `VISION.md` phases refactorées : Phase 1 = Samsung Health raw ingest (issue #2), Phase 2 = NPCRA notebooks sur données perso avec normes littérature (issue #3), Phase 6 = cohorte publique différée (stretch goal)
 - `VISION.md` "Pas un re-parser Samsung Health" précisé : on consomme le raw export (CSV `movement` + JSONs `binning_data` 1-min) plutôt que via l'API Nightfall qui agrège en hourly
