@@ -82,10 +82,13 @@ def main(subject_id: str = "S001", timezone: str = "Europe/Paris") -> None:
     start = activity["ts_local"].min().floor("D")
     end = activity["ts_local"].max().ceil("D")
     grid = pd.date_range(start, end, freq="1min", tz=timezone, inclusive="left")
-    dense = pd.Series(0.0, index=grid)
-    dense.loc[activity["ts_local"].values] = activity["activity"].values
-    present = pd.Series(False, index=grid)
-    present.loc[activity["ts_local"].values] = True
+    # Build tz-aware sparse Series, then reindex onto the dense grid.
+    # Reindex preserves tz alignment ; .loc[] with .values would strip the tz.
+    source_idx = pd.DatetimeIndex(activity["ts_local"])
+    sparse_series = pd.Series(activity["activity"].to_numpy(), index=source_idx)
+    dense_with_nan = sparse_series.reindex(grid)
+    dense = dense_with_nan.fillna(0.0)
+    present = ~dense_with_nan.isna()
     dense_arr = dense.to_numpy()
 
     fixed = estimate_tau(dense_arr, EPOCHS_PER_HOUR, EPOCHS_PER_DAY)
@@ -97,10 +100,13 @@ def main(subject_id: str = "S001", timezone: str = "Europe/Paris") -> None:
     )
 
     # ---- 3. FILTER by per-day coverage ----------------------------------
-    dense_matrix = dense_arr.reshape(-1, EPOCHS_PER_DAY)
-    present_matrix = present.to_numpy().reshape(-1, EPOCHS_PER_DAY)
+    # Truncate to whole days (grid length may exceed integer days by minutes)
+    n_full_days = len(dense_arr) // EPOCHS_PER_DAY
+    trimmed = n_full_days * EPOCHS_PER_DAY
+    dense_matrix = dense_arr[:trimmed].reshape(n_full_days, EPOCHS_PER_DAY)
+    present_matrix = present.to_numpy()[:trimmed].reshape(n_full_days, EPOCHS_PER_DAY)
     cov_per_day = present_matrix.mean(axis=1)
-    n_total_days = len(cov_per_day)
+    n_total_days = n_full_days
     print()
     print(
         f"Coverage breakdown: total {n_total_days} days  |  "
