@@ -4,6 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Samsung Health raw export ingest (movement + sleep + HR + CLI) | `src/n24sal/io/samsung.py`, `tests/test_samsung_ingest.py` | [`00baccb`](#2026-06-01-00baccb) |
 | Pivot personal-first (defer cohort to Phase 6) | `VISION.md`, `PROTOCOL.md`, `NOTES.md` | [`54d0306`](#2026-05-29-54d0306) |
 | Gitignore local Claude Code settings | `.gitignore` | [`41b123e`](#2026-05-29-41b123e) |
 | NPCRA tau estimation | `src/n24sal/npcra/tau.py`, `tests/test_npcra.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
@@ -18,6 +19,18 @@
 ---
 
 ## Changelog
+
+### 2026-06-01 `00baccb`
+feat(io): Samsung Health raw export ingest (movement + sleep + HR + CLI)
+- `src/n24sal/io/samsung.py` — parser de l'export Samsung Health Android (CSV `com.samsung.health.movement.*.csv` + JSONs `jsons/com.samsung.health.movement/<first-char>/<uuid>.binning_data.json` au 1-min, équivalent fonctionnel des activity counts Actiwatch)
+- `read_movement(export_dir)` → DataFrame UTC tz-aware (timestamp + activity ≥ 0), déduplique sur timestamp, gère JSONs manquants gracefully
+- `read_sleep_stage(export_dir)` → intervalles sommeil avec stage_name (awake/light/deep/rem) ; gestion `time_offset` UTC±HHMM → UTC absolu
+- `read_heart_rate(export_dir)` → samples HR event-based, UTC tz-aware
+- `coverage_report(activity, epoch_seconds)` → date range, % coverage, count + longest gap
+- `ingest_samsung_export(export_dir, subject_id, output_dir, ...)` → pipeline complet : valide via `validate_actigraphy_frame`, écrit `activity.parquet` + `sleep_intervals.parquet` + `heart_rate.parquet` + `subject_metadata.json` (Pydantic) + `coverage_report.json`
+- CLI : `python -m n24sal.io.samsung ingest <export_dir> --subject-id S001 --output data/personal/S001/ [--timezone Europe/Paris] [--age 38] [--sex M] [--diagnosis N24SWD] [--no-sleep] [--no-heart-rate]`
+- `tests/test_samsung_ingest.py` — 20 tests GREEN avec fixture synthétique mini-export (BOM CSV + JSONs binning sharded par premier char UUID, mirror du layout réel découvert 2026-05-29) ; couvre helpers offset parsing, parsers movement/sleep/HR, déduplication, gaps coverage, pipeline complet, CLI
+- Suite complète : 53 tests passed in 2.82s (33 NPCRA + 20 Samsung)
 
 ### 2026-05-29 `54d0306`
 docs: pivot to personal-first roadmap (defer cohort work to Phase 6)
