@@ -38,7 +38,8 @@ Hypothèses primaires : H1 et H2 (signature N24 publiée). Hypothèses explorato
 | Samsung Health export (épisodes historiques) | 2016 — 2018 (intermittent) | variable | Exploratoire (H4) |
 | CamNtech MotionWatch 8 | 3 semaines en cours (2026) | 1-min epochs + lumière | Rapport PDF uniquement ; raw inaccessible |
 | Open-Meteo irradiance solaire | Croisée GPS | Horaire | Enrichissement contextuel |
-| MESA Sleep via NSRR (Philips Actiwatch) | Cohort publique | Variable | Reference healthy controls (DUA en cours) |
+| MESA Sleep via NSRR (Philips Actiwatch) | Cohorte publique | Variable | **Différée** — cf. `NOTES.md` decision log 2026-05-29 (CITI training + IRB requis) |
+| NHANES 2011-2014 PAM + PAXLUX (ActiGraph GT3X+ wrist + lumière) | Cohorte publique | 1-min, 7j × ~14 000 sujets | **Différée** — open access mais infrastructure 16 GB requise, reprise en Phase 6 |
 
 ## Plan d'analyse (figé pré-données)
 
@@ -78,6 +79,7 @@ Hypothèses primaires : H1 et H2 (signature N24 publiée). Hypothèses explorato
 4. **Pas de capteur lumière personnel** : seul l'enrichissement Open-Meteo (irradiance solaire extérieure pondérée GPS outdoor) est disponible. Manque l'exposition lumineuse intérieure réelle.
 5. **CamNtech raw indisponible** : seul un rapport PDF de synthèse sera obtenu après restitution. La validation chiffrée Bland-Altman initialement envisagée est remplacée par une **triangulation qualitative** : comparaison `tau` reconstruit vs `tau` estimé par le rapport PDF, et comparaison visuelle d'actogramme sur la fenêtre 3 semaines de port commun. Limitation cardinale du protocole.
 6. **Auto-recherche** : le sujet est à la fois patient, opérateur de l'analyse, et auteur principal. Biais d'investigation reconnu ; mitigation : coauteur clinicien indépendant requis avant submission.
+7. **Pas de cohorte healthy re-dérivée** (Phase 6 différée) : la comparaison est restreinte aux normes publiées dans la littérature (Van Someren 1999, Ortiz-Tudela 2010, Witting 1990 pour les contrôles ; Sack 2007, Hayakawa 2005 pour les N24). La re-dérivation d'une distribution populationnelle depuis un dataset public (NHANES PAM+LUX 2011-2014, MESA Sleep via NSRR) est différée à la Phase 6, conditionnée à la formation CITI Independent Learner et/ou à l'obtention d'un cosignataire institutionnel. Pour le case report initial, cette absence est explicitement énoncée en section *Limitations* du futur manuscrit, avec mention que les normes 1990-2010 datent et peuvent sous-estimer ou sur-estimer la dispersion populationnelle 2026.
 
 ## Amendements
 

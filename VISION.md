@@ -17,7 +17,7 @@ Ce repo n'est ni un tracker de plus, ni un dashboard cosmétique : c'est la **pr
 ## Ce que ce projet n'est pas
 
 - **Pas un produit utilisateur** — Nightfall (SamsungHealth) couvre ce rôle pour la partie visualisation grand public et Android.
-- **Pas un re-parser Samsung Health** — l'ingestion brute des JSON Samsung est faite par Nightfall ; ce repo consomme un export parquet/CSV au schéma portable.
+- **Pas un re-parser Samsung Health *via Nightfall*** — Nightfall agrège en hourly (24 epochs/jour) ce qui dégrade IV ; ce repo consomme directement le Samsung Health raw export (CSV `movement` + JSONs `binning_data` au 1-min) pour préserver la résolution NPCRA. Le schéma parquet d'entrée reste portable, indépendant de la source.
 - **Pas un dashboard cosmétique** — le dashboard Streamlit ici est *data-science angle* : contrôles paramétriques, exports figures publication, comparaisons N=1 vs cohortes publiques.
 - **Pas un projet d'ingénierie cloud** — pas d'auth, pas de multi-utilisateur, pas d'API. Si un jour des données externes sont partagées, c'est via parquet anonymisé.
 
@@ -43,18 +43,18 @@ Notebooks Plotly et dashboard Streamlit utilisent les tokens couleur DataSaillan
 
 | Phase | Contenu | Statut |
 |-------|---------|--------|
-| **0 — Scaffold** | docs + structure + pyproject + tests synthétiques | 🔄 en cours |
-| **1 — Données personnelles** | ingest export Nightfall (parquet) → NPCRA → premier actogramme | À venir |
-| **2 — Cohorte publique** | accès NSRR MESA Sleep (DUA) → reference healthy controls | À venir |
-| **3 — Notebooks publication** | actogramme drift, régression tau, profils 24h, comparaison cohorte | À venir |
-| **4 — Dashboard** | Streamlit data-science angle | À venir |
-| **5 — Manuscrit / preprint** | rédaction case report + figures publication | À venir |
-| **6 — Triangulation CamNtech** | intégration rapport PDF post-restitution | À venir |
+| **0 — Scaffold** | docs + structure + pyproject + tests synthétiques | ✅ done (PR #1) |
+| **1 — Ingestion Samsung Health raw** | parser CSV + binning JSONs → parquet portable 1-min | À venir (issue #2) |
+| **2 — NPCRA personal + literature norms** | actogramme drift, IS/IV/RA fenêtres glissantes, régression tau, comparaison vs Van Someren / Ortiz-Tudela / Sack | À venir (issue #3) |
+| **3 — Dashboard data-science** | Streamlit, contrôles paramétriques fenêtre/source, exports figures publication | À venir |
+| **4 — Manuscrit / preprint** | rédaction case report + figures publication, soumission bioRxiv | À venir |
+| **5 — Triangulation CamNtech** | intégration rapport PDF post-restitution (qualitative) | À venir (post-restitution) |
+| **6 — Cohorte publique** (deferred) | NHANES PAM+LUX (CITI requis) ou MESA Sleep (CITI + cosignataire académique) — stretch goal, post-preprint | Différée |
 
 ## Questions ouvertes
 
 - Quelle revue cible exacte pour le case report ? *Sleep Medicine* lettre vs *JCSM* short report vs preprint bioRxiv seul ?
-- Datasets CamNtech strictement publics : existent-ils ou faut-il se rabattre sur Philips Actiwatch (MESA) comme proxy gold-standard ?
-- Quel format de notebook pour la vulgarisation : Jupyter exporté HTML statique, ou article blog DataSaillance dédié ?
+- Quel timing pour investir dans CITI Independent Learner (~$165, 2 weekends) — maintenant pour ouvrir NHANES/MESA en parallèle, ou après preprint si la trajectoire chrono-recherche se confirme ?
+- Quel format de notebook pour la vulgarisation : Jupyter exporté HTML statique sur GitHub Pages, ou article blog DataSaillance dédié ?
 - Quel niveau d'anonymisation des données personnelles dans le repo public ? (probablement : pas de timestamps absolus, ramener au jour 0 = début enregistrement)
 - Coauteur clinicien : qui contacter ? (médecin du sommeil actuel, équipe chronobio Hôtel-Dieu Lyon, asso française du sommeil)

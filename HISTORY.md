@@ -4,6 +4,8 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Pivot personal-first (defer cohort to Phase 6) | `VISION.md`, `PROTOCOL.md`, `NOTES.md` | [`pending`](#2026-05-29-pivot) |
+| Gitignore local Claude Code settings | `.gitignore` | [`41b123e`](#2026-05-29-41b123e) |
 | NPCRA tau estimation | `src/n24sal/npcra/tau.py`, `tests/test_npcra.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
 | NPCRA metrics (IS, IV, L5, M10, RA, CFI) | `src/n24sal/npcra/metrics.py`, `tests/test_npcra.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
 | Synthetic N24 cosinor fixture | `src/n24sal/synthetic.py`, `tests/test_synthetic.py` | [`64eb5a4`](#2026-05-29-64eb5a4) |
@@ -16,6 +18,21 @@
 ---
 
 ## Changelog
+
+### 2026-05-29 `pending`
+docs: pivot to personal-first roadmap (defer cohort work to Phase 6)
+- `VISION.md` phases refactorées : Phase 1 = Samsung Health raw ingest (issue #2), Phase 2 = NPCRA notebooks sur données perso avec normes littérature (issue #3), Phase 6 = cohorte publique différée (stretch goal)
+- `VISION.md` "Pas un re-parser Samsung Health" précisé : on consomme le raw export (CSV `movement` + JSONs `binning_data` 1-min) plutôt que via l'API Nightfall qui agrège en hourly
+- `VISION.md` Questions ouvertes : ajout du dilemme timing CITI Independent Learner (~$165)
+- `PROTOCOL.md` Sources de données : MESA Sleep et NHANES marqués "Différées"
+- `PROTOCOL.md` Limitation #7 ajoutée : pas de cohorte healthy re-dérivée pour le case report initial, comparaison restreinte aux normes publiées 1990-2010
+- `NOTES.md` backlog : 6 phases réordonnées, Phase 6 (cohorte) déplacée en fin et marquée stretch goal avec options A (NHANES open access 16 GB) et B (MESA via cosignataire académique)
+- `NOTES.md` decision log : ajout entrée "Pivot personal-first" avec raisons (CITI/IRB blockers, infrastructure NHANES, suffisance des normes publiées pour case report défensible)
+- Aucun changement de code — pytest 33/33 inchangé
+
+### 2026-05-29 `41b123e`
+chore: gitignore local Claude Code settings
+- Ajout `.claude/settings.local.json` au `.gitignore` (settings personnels par machine, non partagés)
 
 ### 2026-05-29 `64eb5a4`
 feat: NPCRA pipeline (schema, synthetic cosinor, metrics IS/IV/L5/M10/RA/CFI, tau, tests)
