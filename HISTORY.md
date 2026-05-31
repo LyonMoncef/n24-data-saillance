@@ -4,6 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Diagnostic script for tau on real data | `scripts/investigate_tau.py` | [`ed40e87`](#2026-06-01-ed40e87) |
 | Notebook 02 NPCRA basics (synthetic, executable) | `notebooks/02_npcra_basics.ipynb` | [`f7b8268`](#2026-06-01-f7b8268) |
 | Notebook 03 personal case (template, no exec) | `notebooks/03_personal_case.ipynb` | [`f7b8268`](#2026-06-01-f7b8268) |
 | Bootstrap tau CI via M10-phase resampling | `src/n24sal/npcra/tau.py`, `tests/test_npcra.py` | [`f7b8268`](#2026-06-01-f7b8268) |
@@ -24,6 +25,16 @@
 ---
 
 ## Changelog
+
+### 2026-06-01 `ed40e87`
+chore: diagnostic script for tau estimation on real data
+- `scripts/investigate_tau.py` — compare 4 méthodes côte à côte sur `data/personal/<subject>/activity.parquet` :
+  - BUGGY (comportement actuel : reshape sur série sparse)
+  - FIXED (re-index dense 1-min grid avant reshape)
+  - FILTER 50/70/90% (dense grid + drop des jours à coverage insuffisant)
+  - Distribution stats des phases M10 par jour
+- Outil de validation pour issue robust-tau (open) ; à re-runner après le fix pour confirmer convergence des méthodes
+- Hardcodé subject_id=S001 par défaut, paramétrable en CLI
 
 ### 2026-06-01 `f7b8268`
 feat(viz+npcra): DataSaillance viz module + bootstrap tau CI + Phase 2 notebooks
