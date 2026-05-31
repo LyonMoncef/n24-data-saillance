@@ -8,7 +8,7 @@ from n24sal.npcra import (
     l5_m10,
     relative_amplitude,
 )
-from n24sal.npcra.tau import estimate_tau, m10_phases_per_day
+from n24sal.npcra.tau import bootstrap_tau_ci, estimate_tau, m10_phases_per_day
 from n24sal.synthetic import generate_synthetic_actigraphy
 
 EPOCHS_PER_HOUR = 60
@@ -149,3 +149,51 @@ def test_m10_phases_per_day_length():
     phases = m10_phases_per_day(df["activity"].to_numpy(), EPOCHS_PER_HOUR, EPOCHS_PER_DAY)
     assert len(phases) == 10
     assert ((phases >= 0) & (phases < 24)).all()
+
+
+# -------------------- Bootstrap tau CI --------------------
+
+
+def test_bootstrap_tau_too_few_days():
+    df = generate_synthetic_actigraphy(n_days=2, seed=0)
+    ci = bootstrap_tau_ci(df["activity"].to_numpy(), EPOCHS_PER_HOUR, EPOCHS_PER_DAY, n_iter=100)
+    assert np.isnan(ci.tau_hours)
+    assert ci.n_iterations == 0
+    assert ci.n_days_used == 2
+
+
+def test_bootstrap_tau_ci_contains_point_estimate():
+    df = generate_synthetic_actigraphy(n_days=21, tau_hours=24.7, noise_sd=3.0, seed=7)
+    ci = bootstrap_tau_ci(df["activity"].to_numpy(), EPOCHS_PER_HOUR, EPOCHS_PER_DAY, n_iter=300)
+    # CI must straddle the point estimate by construction (percentile method)
+    assert ci.ci_low_hours <= ci.tau_hours <= ci.ci_high_hours
+    # Point estimate must be near the true tau (separate property from CI coverage)
+    assert abs(ci.tau_hours - 24.7) < 0.1
+    assert ci.n_iterations == 300
+    assert ci.n_days_used == 21
+    assert ci.confidence == 0.95
+    # CI width should be non-zero (i.e. bootstrap actually resampled)
+    assert ci.ci_high_hours - ci.ci_low_hours > 0.0
+
+
+def test_bootstrap_tau_ci_narrows_with_more_days():
+    """More days → tighter CI."""
+    df_short = generate_synthetic_actigraphy(n_days=10, tau_hours=24.7, noise_sd=3.0, seed=0)
+    df_long = generate_synthetic_actigraphy(n_days=40, tau_hours=24.7, noise_sd=3.0, seed=0)
+    ci_short = bootstrap_tau_ci(df_short["activity"].to_numpy(), EPOCHS_PER_HOUR, EPOCHS_PER_DAY, n_iter=200)
+    ci_long = bootstrap_tau_ci(df_long["activity"].to_numpy(), EPOCHS_PER_HOUR, EPOCHS_PER_DAY, n_iter=200)
+    width_short = ci_short.ci_high_hours - ci_short.ci_low_hours
+    width_long = ci_long.ci_high_hours - ci_long.ci_low_hours
+    assert width_long < width_short
+
+
+def test_bootstrap_tau_ci_rejects_invalid_confidence():
+    df = generate_synthetic_actigraphy(n_days=5, seed=0)
+    with pytest.raises(ValueError, match="confidence"):
+        bootstrap_tau_ci(df["activity"].to_numpy(), EPOCHS_PER_HOUR, EPOCHS_PER_DAY, confidence=1.5)
+
+
+def test_bootstrap_tau_ci_rejects_low_n_iter():
+    df = generate_synthetic_actigraphy(n_days=5, seed=0)
+    with pytest.raises(ValueError, match="n_iter"):
+        bootstrap_tau_ci(df["activity"].to_numpy(), EPOCHS_PER_HOUR, EPOCHS_PER_DAY, n_iter=5)

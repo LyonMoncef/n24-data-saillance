@@ -30,6 +30,17 @@ class TauEstimate(NamedTuple):
     n_days: int
 
 
+class TauBootstrapCI(NamedTuple):
+    """Result of :func:`bootstrap_tau_ci`."""
+
+    tau_hours: float
+    ci_low_hours: float
+    ci_high_hours: float
+    n_iterations: int
+    n_days_used: int
+    confidence: float
+
+
 def _unwrap_phases_hours(phases_hours: np.ndarray) -> np.ndarray:
     """Unwrap a series of phases in hours assuming a 24h circular range."""
     rad = phases_hours * (2.0 * np.pi / 24.0)
@@ -117,4 +128,66 @@ def estimate_tau(
         p_value=float(result.pvalue),
         std_err=float(result.stderr),
         n_days=n,
+    )
+
+
+def bootstrap_tau_ci(
+    activity: np.ndarray,
+    epochs_per_hour: int,
+    epochs_per_day: int,
+    *,
+    n_iter: int = 1000,
+    confidence: float = 0.95,
+    seed: int = 42,
+) -> TauBootstrapCI:
+    """Bootstrap confidence interval for ``tau`` via resampling M10 phases.
+
+    Resamples (day-index, M10-phase) pairs with replacement ``n_iter`` times,
+    re-runs the linear regression on each resample, and reports the
+    ``confidence``-level percentile interval on the resulting slope
+    distribution. Point estimate is from the full (non-resampled) regression.
+
+    Returns ``NaN`` everywhere if fewer than three full days are available.
+    """
+    phases = m10_phases_per_day(activity, epochs_per_hour, epochs_per_day)
+    n = len(phases)
+    if n < 3:
+        return TauBootstrapCI(
+            tau_hours=float("nan"),
+            ci_low_hours=float("nan"),
+            ci_high_hours=float("nan"),
+            n_iterations=0,
+            n_days_used=n,
+            confidence=confidence,
+        )
+    if not 0.0 < confidence < 1.0:
+        raise ValueError(f"confidence must be in (0, 1), got {confidence}")
+    if n_iter < 10:
+        raise ValueError(f"n_iter must be ≥ 10, got {n_iter}")
+
+    days = np.arange(n, dtype=float)
+    unwrapped = _unwrap_phases_hours(phases)
+    point = linregress(days, unwrapped)
+
+    rng = np.random.default_rng(seed)
+    slopes = np.empty(n_iter)
+    for i in range(n_iter):
+        idx = rng.integers(0, n, size=n)
+        if len(np.unique(days[idx])) < 2:
+            slopes[i] = float("nan")
+            continue
+        res = linregress(days[idx], unwrapped[idx])
+        slopes[i] = res.slope
+    valid = slopes[~np.isnan(slopes)]
+
+    alpha = (1.0 - confidence) / 2.0
+    low, high = np.percentile(valid, [alpha * 100.0, (1.0 - alpha) * 100.0])
+
+    return TauBootstrapCI(
+        tau_hours=24.0 + float(point.slope),
+        ci_low_hours=24.0 + float(low),
+        ci_high_hours=24.0 + float(high),
+        n_iterations=n_iter,
+        n_days_used=n,
+        confidence=confidence,
     )

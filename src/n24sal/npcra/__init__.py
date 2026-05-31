@@ -6,11 +6,19 @@ from n24sal.npcra.metrics import (
     l5_m10,
     relative_amplitude,
 )
-from n24sal.npcra.tau import TauEstimate, estimate_tau, m10_phases_per_day
+from n24sal.npcra.tau import (
+    TauBootstrapCI,
+    TauEstimate,
+    bootstrap_tau_ci,
+    estimate_tau,
+    m10_phases_per_day,
+)
 
 __all__ = [
     "L5M10Result",
+    "TauBootstrapCI",
     "TauEstimate",
+    "bootstrap_tau_ci",
     "circadian_function_index",
     "estimate_tau",
     "interdaily_stability",
