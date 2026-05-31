@@ -36,11 +36,11 @@ dependencies = [
     "pyarrow>=14.0",
     "pydantic>=2.5",
     "python-dateutil>=2.8",
+    "plotly>=5.18",
 ]
 
 [project.optional-dependencies]
 viz = [
-    "plotly>=5.18",
     "matplotlib>=3.8",
     "seaborn>=0.13",
     "kaleido>=0.2",

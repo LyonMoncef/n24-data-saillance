@@ -4,6 +4,11 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Notebook 02 NPCRA basics (synthetic, executable) | `notebooks/02_npcra_basics.ipynb` | [`f7b8268`](#2026-06-01-f7b8268) |
+| Notebook 03 personal case (template, no exec) | `notebooks/03_personal_case.ipynb` | [`f7b8268`](#2026-06-01-f7b8268) |
+| Bootstrap tau CI via M10-phase resampling | `src/n24sal/npcra/tau.py`, `tests/test_npcra.py` | [`f7b8268`](#2026-06-01-f7b8268) |
+| Viz module: actogram, drift, profile, coverage | `src/n24sal/viz/*` | [`f7b8268`](#2026-06-01-f7b8268) |
+| DataSaillance Plotly theme (teal/amber/cyan) | `src/n24sal/viz/theme.py`, `tests/test_viz.py` | [`f7b8268`](#2026-06-01-f7b8268) |
 | Samsung Health raw export ingest (movement + sleep + HR + CLI) | `src/n24sal/io/samsung.py`, `tests/test_samsung_ingest.py` | [`00baccb`](#2026-06-01-00baccb) |
 | Pivot personal-first (defer cohort to Phase 6) | `VISION.md`, `PROTOCOL.md`, `NOTES.md` | [`54d0306`](#2026-05-29-54d0306) |
 | Gitignore local Claude Code settings | `.gitignore` | [`41b123e`](#2026-05-29-41b123e) |
@@ -19,6 +24,20 @@
 ---
 
 ## Changelog
+
+### 2026-06-01 `f7b8268`
+feat(viz+npcra): DataSaillance viz module + bootstrap tau CI + Phase 2 notebooks
+- `src/n24sal/viz/theme.py` — tokens couleur DataSaillance (teal `#0e9eb0`, amber `#d37c04`, cyan `#3be5e7`) + templates Plotly `datasaillance_dark` / `datasaillance_light` enregistrés ; helper `apply_theme(name)`
+- `src/n24sal/viz/actogram.py` — `double_plot_actogram` (heatmap 2-day repeat, downsampling configurable, séparateur amber à 24h)
+- `src/n24sal/viz/drift.py` — `m10_phase_drift_plot` (M10 unwrapped + régression linéaire overlay, R² affiché en légende)
+- `src/n24sal/viz/profile.py` — `average_24h_profile` (moyenne + bande IQR 25–75%)
+- `src/n24sal/viz/coverage.py` — `coverage_heatmap` (epochs/h par date × heure, gaps visuellement saillants)
+- `src/n24sal/npcra/tau.py` — `bootstrap_tau_ci(n_iter=1000, confidence=0.95)` via resampling des paires (jour, phase M10), retourne `TauBootstrapCI` (tau, ci_low, ci_high, n_iter, n_days, confidence)
+- `pyproject.toml` — `plotly>=5.18` déplacé en dépendance base (le viz module fait partie du package) ; `[viz]` extra reste pour matplotlib/seaborn/kaleido
+- `notebooks/02_npcra_basics.ipynb` — pédagogique exécuté inplace (synthetic entrained vs tau=24.7h, IS/IV/RA/CFI side-by-side, tau recovery avec bootstrap CI, comparaison normes littérature)
+- `notebooks/03_personal_case.ipynb` — template pour analyse perso (coverage map, actogramme full series, NPCRA fenêtres 14j glissantes, tau bootstrap, z-scores vs normes, key results à compléter par H1–H4) ; **shipped sans outputs exécutés** pour ne pas leak data perso
+- Tests : 79 GREEN au total (10 viz smoke tests + 5 bootstrap tau + non-regression)
+- Smoke test sur vraies données (S001, 511k epochs, 479 jours) : IS=0.093 (z=-5.27 vs healthy), RA=0.366 (z=-11.27), CFI=0.420 (z=-3.77) — signatures N24 fortes ; tau=22.43h ±0.04h CI95 = pattern **avance** (-94min/jour) à investiguer (advance type vs unwrap mis-direction)
 
 ### 2026-06-01 `00baccb`
 feat(io): Samsung Health raw export ingest (movement + sleep + HR + CLI)
