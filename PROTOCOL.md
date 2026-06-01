@@ -65,6 +65,13 @@ Hypothèses primaires : H1 et H2 (signature N24 publiée). Hypothèses explorato
 - Comparaison avec normes publiées (Van Someren 1999, Ortiz-Tudela 2010, Witting 1990) : intervalle de confiance bootstrap 1000 itérations
 - Régression `tau` : intervalle de confiance pente bootstrap 1000 itérations ; R² ≥ 0,85 requis pour validité
 
+### Stratégie d'imputation et de filtrage (issue #8, résolu PR à venir)
+
+- **Densification** : la série d'activité parquet est produite sur une grille régulière 1-min alignée aux jours locaux (`Europe/Paris`), gaps imputés à `0.0`. Une colonne booléenne `present` distingue les epochs réellement enregistrés des epochs imputés. Champ `gap_fill_strategy = "zero_fill"` dans `SubjectMetadata` documente le choix. Justification : la version `"none"` (sparse) crée un misalignment journalier lors du reshape `(n_days, 1440)` (le ratio `n_epochs / 1440` n'est plus le nombre de jours réels), faussant l'estimation `tau`.
+- **Filtrage par couverture journalière** : pour la régression `tau`, les jours dont la couverture (`present.mean()` sur la fenêtre 24h) est inférieure à `min_daily_coverage = 0.5` (défaut analyse principale) sont exclus de la régression M10-phase. Justification : sur un jour à faible couverture, le profil 24h moyen est presque plat, `argmax` du M10 window devient quasi-aléatoire et pollue la pente.
+- **Analyse de sensibilité** : la section *Results* du manuscrit reporte `tau` aux seuils `min_daily_coverage` = 0.0, 0.3, 0.5, 0.7 pour démontrer la robustesse de la conclusion principale au choix du seuil.
+- **Métriques non-tau (IS, IV, RA, CFI)** : calculées sur fenêtres glissantes 14j ; chaque fenêtre est conservée si elle contient au moins 60% des epochs attendus. Pas de filtrage `present_mask` à l'épisode interne (les fenêtres avec gaps légers restent informatives — la métrique elle-même tolère le bruit).
+
 ### Logiciels
 
 - Implémentation Python pure : `n24sal` (ce repo), tests d'égalité contre `pyActigraphy` 0.3+ comme oracle

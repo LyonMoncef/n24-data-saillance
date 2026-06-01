@@ -85,26 +85,63 @@ def m10_phases_per_day(
     return phases
 
 
+def _select_valid_days(
+    phases: np.ndarray,
+    present_mask: np.ndarray | None,
+    epochs_per_day: int,
+    min_daily_coverage: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return (day_indices, phases) filtered by per-day coverage threshold."""
+    n = len(phases)
+    if present_mask is None or min_daily_coverage <= 0.0:
+        return np.arange(n, dtype=float), phases
+    if len(present_mask) < n * epochs_per_day:
+        raise ValueError(
+            f"present_mask length {len(present_mask)} too short for {n} days × {epochs_per_day} epochs"
+        )
+    cov = present_mask[: n * epochs_per_day].reshape(n, epochs_per_day).mean(axis=1)
+    keep = cov >= min_daily_coverage
+    return np.where(keep)[0].astype(float), phases[keep]
+
+
 def estimate_tau(
     activity: np.ndarray,
     epochs_per_hour: int,
     epochs_per_day: int,
+    *,
+    present_mask: np.ndarray | None = None,
+    min_daily_coverage: float = 0.0,
 ) -> TauEstimate:
     """Estimate the intrinsic circadian period via M10 phase drift regression.
 
     Steps:
 
     1. Compute the M10 start-hour per calendar day.
-    2. Circularly unwrap the resulting phase series (24h wrap → continuous).
-    3. Regress phase against day index. ``slope`` is in hours per day.
-    4. ``tau_hours = 24.0 + slope``.
+    2. Optionally drop days whose recording coverage is below
+       ``min_daily_coverage`` (requires a boolean ``present_mask`` aligned to
+       ``activity``).
+    3. Circularly unwrap the remaining phase series (24h wrap → continuous).
+    4. Regress phase against day index. ``slope`` is in hours per day.
+    5. ``tau_hours = 24.0 + slope``.
 
-    Requires at least three full days. With fewer days the returned
+    Requires at least three valid days. With fewer days the returned
     ``TauEstimate`` is filled with ``NaN`` except ``n_days``.
-    """
 
+    Parameters
+    ----------
+    present_mask
+        Optional boolean array same length as ``activity``. ``True`` where the
+        epoch was actually recorded, ``False`` where it was imputed. Required
+        if ``min_daily_coverage > 0``.
+    min_daily_coverage
+        Drop days with fewer than this fraction of recorded epochs.
+        ``0.0`` (default) = no filtering.
+    """
     phases = m10_phases_per_day(activity, epochs_per_hour, epochs_per_day)
-    n = len(phases)
+    day_indices, phases_kept = _select_valid_days(
+        phases, present_mask, epochs_per_day, min_daily_coverage
+    )
+    n = len(phases_kept)
     if n < 3:
         return TauEstimate(
             tau_hours=float("nan"),
@@ -116,9 +153,8 @@ def estimate_tau(
             n_days=n,
         )
 
-    days = np.arange(n, dtype=float)
-    unwrapped = _unwrap_phases_hours(phases)
-    result = linregress(days, unwrapped)
+    unwrapped = _unwrap_phases_hours(phases_kept)
+    result = linregress(day_indices, unwrapped)
 
     return TauEstimate(
         tau_hours=24.0 + float(result.slope),
@@ -139,6 +175,8 @@ def bootstrap_tau_ci(
     n_iter: int = 1000,
     confidence: float = 0.95,
     seed: int = 42,
+    present_mask: np.ndarray | None = None,
+    min_daily_coverage: float = 0.0,
 ) -> TauBootstrapCI:
     """Bootstrap confidence interval for ``tau`` via resampling M10 phases.
 
@@ -147,10 +185,20 @@ def bootstrap_tau_ci(
     ``confidence``-level percentile interval on the resulting slope
     distribution. Point estimate is from the full (non-resampled) regression.
 
-    Returns ``NaN`` everywhere if fewer than three full days are available.
+    ``present_mask`` and ``min_daily_coverage`` behave as in :func:`estimate_tau`.
+
+    Returns ``NaN`` everywhere if fewer than three valid days are available.
     """
+    if not 0.0 < confidence < 1.0:
+        raise ValueError(f"confidence must be in (0, 1), got {confidence}")
+    if n_iter < 10:
+        raise ValueError(f"n_iter must be ≥ 10, got {n_iter}")
+
     phases = m10_phases_per_day(activity, epochs_per_hour, epochs_per_day)
-    n = len(phases)
+    day_indices, phases_kept = _select_valid_days(
+        phases, present_mask, epochs_per_day, min_daily_coverage
+    )
+    n = len(phases_kept)
     if n < 3:
         return TauBootstrapCI(
             tau_hours=float("nan"),
@@ -160,23 +208,18 @@ def bootstrap_tau_ci(
             n_days_used=n,
             confidence=confidence,
         )
-    if not 0.0 < confidence < 1.0:
-        raise ValueError(f"confidence must be in (0, 1), got {confidence}")
-    if n_iter < 10:
-        raise ValueError(f"n_iter must be ≥ 10, got {n_iter}")
 
-    days = np.arange(n, dtype=float)
-    unwrapped = _unwrap_phases_hours(phases)
-    point = linregress(days, unwrapped)
+    unwrapped = _unwrap_phases_hours(phases_kept)
+    point = linregress(day_indices, unwrapped)
 
     rng = np.random.default_rng(seed)
     slopes = np.empty(n_iter)
     for i in range(n_iter):
         idx = rng.integers(0, n, size=n)
-        if len(np.unique(days[idx])) < 2:
+        if len(np.unique(day_indices[idx])) < 2:
             slopes[i] = float("nan")
             continue
-        res = linregress(days[idx], unwrapped[idx])
+        res = linregress(day_indices[idx], unwrapped[idx])
         slopes[i] = res.slope
     valid = slopes[~np.isnan(slopes)]
 

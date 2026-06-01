@@ -20,6 +20,7 @@ from n24sal.io.samsung import (
     _local_to_utc,
     _parse_offset_to_minutes,
     coverage_report,
+    densify_activity,
     ingest_samsung_export,
     read_heart_rate,
     read_movement,
@@ -372,7 +373,12 @@ def test_ingest_full_pipeline(tmp_path):
         assert (output / filename).exists(), f"missing {filename}"
 
     activity = pd.read_parquet(output / "activity.parquet")
-    assert len(activity) == 4 * 60
+    # Densified by default: length is a whole multiple of 1440 (1 local day)
+    assert len(activity) % 1440 == 0
+    assert "present" in activity.columns
+    # The original 4 hours = 240 minutes are present, the rest are zero-filled
+    assert activity["present"].sum() == 4 * 60
+    assert (activity.loc[~activity["present"], "activity"] == 0.0).all()
 
     meta = json.loads((output / "subject_metadata.json").read_text())
     assert meta["subject_id"] == "STEST"
@@ -381,8 +387,60 @@ def test_ingest_full_pipeline(tmp_path):
     assert meta["age"] == 38
     assert meta["epoch_seconds"] == 60
     assert meta["timezone"] == "Europe/Paris"
+    assert meta["gap_fill_strategy"] == "zero_fill"
 
-    assert report["coverage_pct"] >= 99
+    assert report["dense"] is True
+    assert report["n_epochs_present"] == 4 * 60
+
+
+def test_ingest_no_densify_preserves_sparse_legacy(tmp_path):
+    export = _make_movement_export(tmp_path / "export", n_hours=2)
+    output = tmp_path / "out"
+    ingest_samsung_export(
+        export_dir=export,
+        subject_id="STEST",
+        output_dir=output,
+        densify=False,
+        include_sleep=False,
+        include_heart_rate=False,
+    )
+    activity = pd.read_parquet(output / "activity.parquet")
+    assert len(activity) == 2 * 60  # exactly the 120 source epochs, no padding
+    assert "present" not in activity.columns
+    meta = json.loads((output / "subject_metadata.json").read_text())
+    assert meta["gap_fill_strategy"] == "none"
+    report = json.loads((output / "coverage_report.json").read_text())
+    assert report["dense"] is False
+
+
+# -------------------- Densify helper --------------------
+
+
+def test_densify_produces_whole_local_days(tmp_path):
+    export = _make_movement_export(tmp_path / "export", n_hours=4)
+    sparse = read_movement(export)
+    dense = densify_activity(sparse, timezone_name="Europe/Paris")
+    assert len(dense) % 1440 == 0
+    assert {"timestamp", "activity", "present"} <= set(dense.columns)
+    assert dense["present"].sum() == 4 * 60  # original epochs preserved
+    assert dense["present"].dtype == bool
+    assert dense["timestamp"].is_monotonic_increasing
+    assert (dense.loc[dense["present"], "activity"].to_numpy()
+            == sparse["activity"].to_numpy()).all()
+
+
+def test_densify_zero_fills_gaps(tmp_path):
+    export = _make_movement_export(tmp_path / "export", n_hours=3)
+    sparse = read_movement(export)
+    dense = densify_activity(sparse, timezone_name="Europe/Paris")
+    n_imputed = (~dense["present"]).sum()
+    assert n_imputed > 0
+    assert (dense.loc[~dense["present"], "activity"] == 0.0).all()
+
+
+def test_densify_rejects_empty_input():
+    with pytest.raises(ValueError, match="empty"):
+        densify_activity(pd.DataFrame({"timestamp": [], "activity": []}), timezone_name="UTC")
 
 
 def test_ingest_with_no_sleep_no_hr_succeeds(tmp_path):
