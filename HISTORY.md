@@ -4,6 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Fix investigate_tau script (tz-aware reindex + day truncate) | `scripts/investigate_tau.py` | [`adbf89a`](#2026-06-01-adbf89a) |
 | Diagnostic script for tau on real data | `scripts/investigate_tau.py` | [`ed40e87`](#2026-06-01-ed40e87) |
 | Notebook 02 NPCRA basics (synthetic, executable) | `notebooks/02_npcra_basics.ipynb` | [`f7b8268`](#2026-06-01-f7b8268) |
 | Notebook 03 personal case (template, no exec) | `notebooks/03_personal_case.ipynb` | [`f7b8268`](#2026-06-01-f7b8268) |
@@ -25,6 +26,12 @@
 ---
 
 ## Changelog
+
+### 2026-06-01 `adbf89a`
+fix: investigate_tau script — tz-aware reindex + day-boundary truncate
+- `.loc[ts.values] = ...` strippait la tz et faisait planter le set ; remplacé par `pd.Series(...).reindex(grid)` qui préserve l'alignement tz-aware
+- Le grid `pd.date_range(start, end, freq="1min")` peut produire une longueur non-multiple de 1440 → ajout d'une troncature explicite à `n_full_days * EPOCHS_PER_DAY` avant le reshape
+- Premier run avec output complet sur S001 (479 jours, 511k epochs) : **bug primaire confirmé** — BUGGY tau=22.43h vs FIXED tau=24.718h (CI95 [24.70, 24.74], R²=0.894, 480 jours utilisés). FILTER 50%/70% donnent 24.43/24.63 (cohérent). Le vrai tau est dans la range N24 publiée (Sack 2007 : 24.2-25.5h). Issue #8 mise à jour avec ces données.
 
 ### 2026-06-01 `ed40e87`
 chore: diagnostic script for tau estimation on real data
