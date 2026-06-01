@@ -4,6 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Densify Samsung ingest + present column + tau coverage filter (closes #8) | `src/n24sal/io/samsung.py`, `src/n24sal/io/schemas.py`, `src/n24sal/npcra/tau.py`, `notebooks/03_personal_case.ipynb`, `PROTOCOL.md` | [`pending`](#2026-06-01-issue8) |
 | Fix investigate_tau script (tz-aware reindex + day truncate) | `scripts/investigate_tau.py` | [`adbf89a`](#2026-06-01-adbf89a) |
 | Diagnostic script for tau on real data | `scripts/investigate_tau.py` | [`ed40e87`](#2026-06-01-ed40e87) |
 | Notebook 02 NPCRA basics (synthetic, executable) | `notebooks/02_npcra_basics.ipynb` | [`f7b8268`](#2026-06-01-f7b8268) |
@@ -26,6 +27,16 @@
 ---
 
 ## Changelog
+
+### 2026-06-01 `pending` — closes #8
+feat: densify Samsung ingest + present column + tau coverage filter
+- `src/n24sal/io/schemas.py` — nouveau type `GapFillStrategy` (`"none"` / `"zero_fill"`) + champ `SubjectMetadata.gap_fill_strategy` (défaut `"none"`) ; `present` ajouté aux `ACTIGRAPHY_OPTIONAL_COLUMNS` ; `validate_actigraphy_frame` rejette `present` non-booléen
+- `src/n24sal/io/samsung.py` — nouvelle fonction `densify_activity(sparse, timezone, epoch_seconds)` produit grille 1-min régulière alignée aux jours locaux avec colonne `present` (bool, True où l'epoch était réellement enregistré) ; `ingest_samsung_export` densifie par défaut (param `densify=True`), `coverage_report` détecte automatiquement dense vs sparse, CLI ajoute `--no-densify` pour back-compat legacy
+- `src/n24sal/npcra/tau.py` — `estimate_tau` et `bootstrap_tau_ci` acceptent `present_mask: np.ndarray | None` et `min_daily_coverage: float = 0.0` ; les jours dont `present.mean()` sur la fenêtre 24h est inférieure au seuil sont exclus de la régression M10-phase ; nouvelle helper privée `_select_valid_days`
+- `notebooks/03_personal_case.ipynb` — détecte automatiquement `gap_fill_strategy == "zero_fill"` + colonne `present`, passe `present_mask` et `min_daily_coverage=0.5` à `estimate_tau`/`bootstrap_tau_ci`, affiche un warning si parquet legacy sparse
+- `PROTOCOL.md` — nouvelle section "Stratégie d'imputation et de filtrage" documentant la densification + filtrage seuil + analyse de sensibilité prévue dans le manuscrit
+- Tests : +8 nouveaux (densify_activity helper, no-densify legacy, coverage filtering on synthetic gaps, mismatched mask validation) ; total 86 GREEN
+- **Verified on S001 real data** : 511 303 sparse → 691 200 dense epochs (480 local days, 74% present). Tau no-filter = 24.7183h R²=0.894 CI95 [24.6988, 24.7368]. Sensibilité seuil : 30%→24.67h / 50%→24.43h / 70%→24.63h, tous dans la range N24 littérature Sack 2007 (24.2-25.5h). Convergence BUGGY vs FIXED dans `scripts/investigate_tau.py` désormais 100%
 
 ### 2026-06-01 `adbf89a`
 fix: investigate_tau script — tz-aware reindex + day-boundary truncate

@@ -197,3 +197,77 @@ def test_bootstrap_tau_ci_rejects_low_n_iter():
     df = generate_synthetic_actigraphy(n_days=5, seed=0)
     with pytest.raises(ValueError, match="n_iter"):
         bootstrap_tau_ci(df["activity"].to_numpy(), EPOCHS_PER_HOUR, EPOCHS_PER_DAY, n_iter=5)
+
+
+# -------------------- Coverage filtering --------------------
+
+
+def _make_dense_with_synthetic_gaps(n_days: int, tau: float, gap_day_indices: list[int], seed: int = 0):
+    """Generate dense synthetic data, then zero-out specific calendar days."""
+    df = generate_synthetic_actigraphy(n_days=n_days, tau_hours=tau, noise_sd=2.0, seed=seed)
+    arr = df["activity"].to_numpy().copy()
+    present = np.ones(len(arr), dtype=bool)
+    for d in gap_day_indices:
+        s = d * EPOCHS_PER_DAY
+        e = (d + 1) * EPOCHS_PER_DAY
+        arr[s:e] = 0.0
+        present[s:e] = False
+    return arr, present
+
+
+def test_estimate_tau_filter_drops_zeroed_days():
+    """Days with no recording (zero-filled, present=False) should be excluded
+    by min_daily_coverage and not bias the regression."""
+    arr, present = _make_dense_with_synthetic_gaps(
+        n_days=21, tau=24.7, gap_day_indices=[5, 10, 15]
+    )
+    # Without mask → noisy days included → tau may be biased
+    no_filter = estimate_tau(arr, EPOCHS_PER_HOUR, EPOCHS_PER_DAY)
+    # With mask + threshold → bad days dropped → cleaner estimate
+    filtered = estimate_tau(
+        arr, EPOCHS_PER_HOUR, EPOCHS_PER_DAY,
+        present_mask=present, min_daily_coverage=0.5,
+    )
+    assert filtered.n_days == 18  # 21 - 3 gap days
+    assert abs(filtered.tau_hours - 24.7) < 0.2
+
+
+def test_estimate_tau_filter_zero_threshold_keeps_all_days():
+    arr, present = _make_dense_with_synthetic_gaps(n_days=14, tau=24.5, gap_day_indices=[3])
+    res = estimate_tau(
+        arr, EPOCHS_PER_HOUR, EPOCHS_PER_DAY,
+        present_mask=present, min_daily_coverage=0.0,
+    )
+    assert res.n_days == 14
+
+
+def test_estimate_tau_filter_no_mask_ignores_threshold():
+    arr, _ = _make_dense_with_synthetic_gaps(n_days=14, tau=24.5, gap_day_indices=[3])
+    res = estimate_tau(
+        arr, EPOCHS_PER_HOUR, EPOCHS_PER_DAY,
+        min_daily_coverage=0.9,
+    )
+    assert res.n_days == 14  # no mask → no filtering applied
+
+
+def test_bootstrap_tau_ci_filter_respects_present_mask():
+    arr, present = _make_dense_with_synthetic_gaps(
+        n_days=21, tau=24.7, gap_day_indices=[2, 7, 12]
+    )
+    ci = bootstrap_tau_ci(
+        arr, EPOCHS_PER_HOUR, EPOCHS_PER_DAY,
+        n_iter=200,
+        present_mask=present, min_daily_coverage=0.5,
+    )
+    assert ci.n_days_used == 18
+    assert ci.ci_low_hours <= ci.tau_hours <= ci.ci_high_hours
+
+
+def test_estimate_tau_rejects_mismatched_mask():
+    arr = np.zeros(EPOCHS_PER_DAY * 5)
+    short_mask = np.ones(EPOCHS_PER_DAY * 2, dtype=bool)
+    with pytest.raises(ValueError, match="present_mask length"):
+        estimate_tau(
+            arr, EPOCHS_PER_HOUR, EPOCHS_PER_DAY,
+            present_mask=short_mask, min_daily_coverage=0.5,
+        )

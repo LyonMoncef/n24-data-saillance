@@ -37,6 +37,7 @@ from pathlib import Path
 import pandas as pd
 
 from n24sal.io.schemas import (
+    GapFillStrategy,
     SubjectMetadata,
     validate_actigraphy_frame,
 )
@@ -236,12 +237,32 @@ def _safe_float(value: str) -> float:
 
 
 def coverage_report(activity: pd.DataFrame, epoch_seconds: int = 60) -> dict:
-    """Coverage / gap report on an activity series."""
+    """Coverage / gap report on an activity series.
+
+    If a ``present`` boolean column is provided (dense series), coverage is
+    computed exactly from it. Otherwise (sparse legacy series), coverage is
+    computed by comparing actual epoch count to expected based on span.
+    """
     if activity.empty:
         return {"n_epochs_actual": 0, "coverage_pct": 0.0}
+
     start = activity["timestamp"].iloc[0]
     end = activity["timestamp"].iloc[-1]
     duration_s = (end - start).total_seconds()
+
+    if "present" in activity.columns:
+        present_count = int(activity["present"].sum())
+        total_count = len(activity)
+        return {
+            "date_start": start.isoformat(),
+            "date_end": end.isoformat(),
+            "duration_days": round(duration_s / 86400, 2),
+            "n_epochs_total_grid": total_count,
+            "n_epochs_present": present_count,
+            "coverage_pct": round(present_count / total_count * 100, 2) if total_count else 0.0,
+            "dense": True,
+        }
+
     expected = int(duration_s / epoch_seconds) + 1
     actual = len(activity)
     diffs = activity["timestamp"].diff().dropna()
@@ -257,7 +278,57 @@ def coverage_report(activity: pd.DataFrame, epoch_seconds: int = 60) -> dict:
         "coverage_pct": round(actual / expected * 100, 2),
         "n_gaps_over_2_epochs": int(len(gaps)),
         "longest_gap_hours": round(longest_gap.total_seconds() / 3600, 2),
+        "dense": False,
     }
+
+
+def densify_activity(
+    sparse: pd.DataFrame,
+    *,
+    timezone_name: str,
+    epoch_seconds: int = 60,
+) -> pd.DataFrame:
+    """Reindex a sparse 1-min activity DataFrame onto a dense grid aligned to local days.
+
+    The output has columns ``timestamp`` (UTC tz-aware), ``activity`` (float ≥ 0,
+    zero-filled where the source had a gap) and ``present`` (bool, ``True`` where
+    the value was originally recorded). Length is an integer multiple of the
+    number of epochs per day (24h aligned to ``timezone_name``).
+    """
+    if sparse.empty:
+        raise ValueError("cannot densify an empty activity DataFrame")
+
+    epochs_per_day = 86400 // epoch_seconds
+    local_ts = sparse["timestamp"].dt.tz_convert(timezone_name)
+    start_local = local_ts.min().floor("D")
+    end_local = local_ts.max().ceil("D")
+    grid_local = pd.date_range(
+        start_local, end_local, freq=f"{epoch_seconds}s", tz=timezone_name, inclusive="left"
+    )
+    # Truncate to whole local days
+    n_full_days = len(grid_local) // epochs_per_day
+    grid_local = grid_local[: n_full_days * epochs_per_day]
+    grid_utc = grid_local.tz_convert("UTC")
+
+    # Floor source timestamps to the epoch grid (defensive: real Samsung
+    # data is already minute-aligned, but synthetic fixtures or other devices
+    # may have sub-minute offsets that would silently make the reindex empty).
+    src_index = pd.DatetimeIndex(sparse["timestamp"]).floor(f"{epoch_seconds}s")
+    sparse_series = pd.Series(sparse["activity"].to_numpy(), index=src_index)
+    # If flooring produced duplicate epochs, keep the mean
+    if not sparse_series.index.is_unique:
+        sparse_series = sparse_series.groupby(level=0).mean()
+    dense_with_nan = sparse_series.reindex(grid_utc)
+    present = ~dense_with_nan.isna()
+    dense = dense_with_nan.fillna(0.0)
+
+    return pd.DataFrame(
+        {
+            "timestamp": grid_utc,
+            "activity": dense.to_numpy(),
+            "present": present.to_numpy(),
+        }
+    )
 
 
 def ingest_samsung_export(
@@ -272,17 +343,42 @@ def ingest_samsung_export(
     diagnosis: list[str] | None = None,
     include_sleep: bool = True,
     include_heart_rate: bool = True,
+    densify: bool = True,
 ) -> dict:
     """Full Samsung Health export ingest pipeline.
 
-    Writes ``activity.parquet`` (mandatory), optional ``sleep_intervals.parquet``
-    and ``heart_rate.parquet``, plus ``subject_metadata.json`` and
-    ``coverage_report.json``. Returns the coverage report dict.
+    Writes ``activity.parquet`` (mandatory, dense 1-min grid by default with a
+    ``present`` bool column tracking which epochs were originally recorded),
+    optional ``sleep_intervals.parquet`` and ``heart_rate.parquet``, plus
+    ``subject_metadata.json`` and ``coverage_report.json``. Returns the coverage
+    report dict.
+
+    Parameters
+    ----------
+    densify
+        If True (default), the activity series is re-indexed onto a dense 1-min
+        grid aligned to local days, with gaps zero-filled and a ``present``
+        column added. Disable only for backward compatibility with legacy
+        sparse parquets (NPCRA on sparse series gives biased tau, see issue #8).
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("Reading movement from %s", export_dir)
-    activity = read_movement(export_dir)
+    sparse_activity = read_movement(export_dir)
+    if densify:
+        activity = densify_activity(
+            sparse_activity, timezone_name=timezone_name, epoch_seconds=epoch_seconds
+        )
+        strategy: GapFillStrategy = "zero_fill"
+        logger.info(
+            "Densified: %d sparse → %d dense epochs (%d local days)",
+            len(sparse_activity),
+            len(activity),
+            len(activity) // (86400 // epoch_seconds),
+        )
+    else:
+        activity = sparse_activity
+        strategy = "none"
     validate_actigraphy_frame(activity)
     activity_path = output_dir / "activity.parquet"
     activity.to_parquet(activity_path, index=False)
@@ -317,6 +413,7 @@ def ingest_samsung_export(
         age=age,
         sex=sex,
         diagnosis=diagnosis or [],
+        gap_fill_strategy=strategy,
     )
     meta_path = output_dir / "subject_metadata.json"
     meta_path.write_text(metadata.model_dump_json(indent=2))
@@ -324,13 +421,22 @@ def ingest_samsung_export(
 
     report = coverage_report(activity, epoch_seconds=epoch_seconds)
     (output_dir / "coverage_report.json").write_text(json.dumps(report, indent=2))
-    logger.info(
-        "Coverage: %.1f%% over %s days (%d gaps, longest %sh)",
-        report["coverage_pct"],
-        report["duration_days"],
-        report["n_gaps_over_2_epochs"],
-        report["longest_gap_hours"],
-    )
+    if report.get("dense"):
+        logger.info(
+            "Coverage: %.1f%% over %s days (%d/%d epochs present, dense grid)",
+            report["coverage_pct"],
+            report["duration_days"],
+            report["n_epochs_present"],
+            report["n_epochs_total_grid"],
+        )
+    else:
+        logger.info(
+            "Coverage: %.1f%% over %s days (%d gaps, longest %sh, sparse)",
+            report["coverage_pct"],
+            report["duration_days"],
+            report["n_gaps_over_2_epochs"],
+            report["longest_gap_hours"],
+        )
     return report
 
 
@@ -361,6 +467,11 @@ def _cli(argv: list[str] | None = None) -> int:
     )
     ingest.add_argument("--no-sleep", action="store_true", help="Skip sleep_stage parsing")
     ingest.add_argument("--no-heart-rate", action="store_true", help="Skip heart_rate parsing")
+    ingest.add_argument(
+        "--no-densify",
+        action="store_true",
+        help="Skip densification (legacy sparse output ; biases NPCRA tau — see issue #8)",
+    )
     ingest.add_argument("-v", "--verbose", action="count", default=0)
 
     args = parser.parse_args(argv)
@@ -379,6 +490,7 @@ def _cli(argv: list[str] | None = None) -> int:
             diagnosis=args.diagnosis,
             include_sleep=not args.no_sleep,
             include_heart_rate=not args.no_heart_rate,
+            densify=not args.no_densify,
         )
     return 0
 

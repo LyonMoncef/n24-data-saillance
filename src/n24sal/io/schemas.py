@@ -3,12 +3,14 @@
 Two artefacts per subject:
 
 1. **Time-series parquet** validated by :func:`validate_actigraphy_frame`.
-   Required columns: ``timestamp``, ``activity``. Optional: ``light_lux``,
-   ``sleep_state``.
+   Required columns: ``timestamp``, ``activity``. Optional: ``present``
+   (boolean — ``True`` where the epoch was actually recorded, ``False``
+   where the value is imputed per ``SubjectMetadata.gap_fill_strategy``),
+   ``light_lux``, ``sleep_state``.
 
 2. **JSON metadata sidecar** modelled by :class:`SubjectMetadata` describing
    the recording context (device, epoch length, timezone, demographics,
-   diagnosis).
+   diagnosis, **gap-fill strategy**).
 
 Keeping these decoupled lets the same NPCRA pipeline run on Samsung Health
 exports, Philips Actiwatch CSV, GENEActiv ``.bin`` processed series, or
@@ -24,7 +26,7 @@ import pandas as pd
 from pydantic import BaseModel, Field, field_validator
 
 ACTIGRAPHY_REQUIRED_COLUMNS: tuple[str, ...] = ("timestamp", "activity")
-ACTIGRAPHY_OPTIONAL_COLUMNS: tuple[str, ...] = ("light_lux", "sleep_state")
+ACTIGRAPHY_OPTIONAL_COLUMNS: tuple[str, ...] = ("present", "light_lux", "sleep_state")
 
 DeviceKind = Literal[
     "samsung_galaxy_watch",
@@ -39,6 +41,11 @@ DeviceKind = Literal[
 
 SourceQuality = Literal["high", "medium", "low"]
 Sex = Literal["M", "F", "O"]
+
+GapFillStrategy = Literal[
+    "none",       # legacy / sparse series — only originally-present epochs
+    "zero_fill",  # dense 1-min grid, missing epochs filled 0.0 + 'present' column tracks origin
+]
 
 
 class SubjectMetadata(BaseModel):
@@ -57,6 +64,15 @@ class SubjectMetadata(BaseModel):
     diagnosis: list[str] = Field(default_factory=list)
     medications: list[str] = Field(default_factory=list)
     notes: str | None = None
+    gap_fill_strategy: GapFillStrategy = Field(
+        default="none",
+        description=(
+            "How gaps in the source recording are handled in the parquet. "
+            "'none' = sparse series (missing minutes simply absent). "
+            "'zero_fill' = dense 1-min grid with zeros where missing ; "
+            "a boolean 'present' column distinguishes real epochs from imputed ones."
+        ),
+    )
 
     @field_validator("recording_end")
     @classmethod
@@ -90,3 +106,6 @@ def validate_actigraphy_frame(df: pd.DataFrame) -> None:
         diffs = df["timestamp"].diff().dropna()
         if (diffs <= pd.Timedelta(0)).any():
             raise ValueError("'timestamp' column must be strictly monotonically increasing")
+
+    if "present" in df.columns and not pd.api.types.is_bool_dtype(df["present"]):
+        raise ValueError("'present' column must be boolean dtype")
