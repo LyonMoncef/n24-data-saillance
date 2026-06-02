@@ -4,6 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Notebook 04 — weekly pattern analysis (social entrainment leak detection) | `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`pending`](#2026-06-02-nb04) |
 | Interactive sleep agenda + period selection + regime side-by-side (closes #11) | `tools/sleep_agenda/agenda_render.py`, `src/n24sal/io/periods.py`, `notebooks/03_personal_case.ipynb`, `tests/test_periods.py`, `tests/test_sleep_agenda.py` | [`1572be5`](#2026-06-02-1572be5) |
 | Densify Samsung ingest + present column + tau coverage filter (closes #8) | `src/n24sal/io/samsung.py`, `src/n24sal/io/schemas.py`, `src/n24sal/npcra/tau.py`, `notebooks/03_personal_case.ipynb`, `PROTOCOL.md` | [`c5245fa`](#2026-06-01-c5245fa) |
 | Fix investigate_tau script (tz-aware reindex + day truncate) | `scripts/investigate_tau.py` | [`adbf89a`](#2026-06-01-adbf89a) |
@@ -28,6 +29,18 @@
 ---
 
 ## Changelog
+
+### 2026-06-02 `pending`
+feat(notebooks): weekly pattern analysis — social entrainment leak detection
+- `notebooks/04_regime_atcf_weekly_pattern.ipynb` — template paramétrable (`PERIOD_NAME` au top, défaut `regime_atcf`) qui dissèque une période sous régime travail-semaine en cinq analyses :
+  1. Profile 24h activité weekday vs weekend (overlay deux courbes)
+  2. Distribution M10 phase par jour-de-la-semaine (boxplot Lun-Dim)
+  3. Sleep onset / wake-up par jour-de-la-semaine (depuis `sleep_intervals.parquet`, en hours-from-20h)
+  4. Tau sur fenêtres 28j roulantes step 7j (courbe tau + R² sur la période)
+  5. **Tau weekdays-only vs weekends-only** : régression M10 phases par sous-ensemble, bootstrap CI 500 iter
+- Template sans outputs (no personal data committed)
+- **Smoke-tested sur S001 / regime_atcf (101 jours, avr-juil 2025)** — finding majeur : weekdays-only tau=24.0004h R²=0.000 (entrainement social parfait), weekends-only tau=24.3127h R²=0.6484 (+18.7 min/j drift), social jet lag M10 ~6h entre semaine et weekend. Le N24 sous-jacent est invisible en analyse globale mais leak en isolation weekend — angle de discussion fort pour le case report.
+- Connue limitation : Item 3 (sleep onset/wake) montre des wake-up à 04:00 en semaine, suggérant un bug d'aggregation des siestes du jour qui suit avec la nuit. À fixer en follow-up.
 
 ### 2026-06-02 `1572be5` — closes #11
 feat: interactive sleep agenda + visual period selection + regime side-by-side analysis
