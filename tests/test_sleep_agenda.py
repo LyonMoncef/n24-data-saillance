@@ -64,7 +64,9 @@ def test_load_nights_from_parquet(tmp_path):
     assert len(nights) >= 3
     for n in nights:
         assert {"date", "stages", "coverage_pct"} <= set(n.keys())
-        assert all(s[0] in {"LIGHT", "DEEP", "REM", "AWAKE"} for s in n["stages"])
+        for st in n["stages"]:
+            assert {"stage_name", "sleep_id", "s_ms", "e_ms", "s_iso_local", "e_iso_local"} <= set(st.keys())
+            assert st["stage_name"] in {"LIGHT", "DEEP", "REM", "AWAKE"}
 
 
 def test_load_nights_handles_missing_activity(tmp_path):
@@ -112,6 +114,35 @@ def test_render_html_non_interactive_strips_js(tmp_path):
     assert '<div id="sel-panel">' not in html
     assert "<script>" not in html
     assert "save-btn" not in html  # JS-only id
+
+
+def test_render_html_blocks_have_night_selection_attrs(tmp_path):
+    """Each .sleep block carries data-sleep-id + data-start-local + data-end-local + data-night."""
+    sleep = _fixture_sleep(tmp_path)
+    nights = agenda_render.load_nights_from_parquet(sleep, None, "Europe/Paris")
+    html = agenda_render.render_html(
+        nights, subject_id="STEST", timezone_name="Europe/Paris",
+        theme="datasaillance", interactive=True,
+    )
+    assert "data-sleep-id=" in html
+    assert "data-start-local=" in html
+    assert "data-end-local=" in html
+    assert "data-night=" in html
+    # Session-index CSS class applied
+    assert "sess-0" in html
+
+
+def test_render_html_night_modal_present_in_interactive(tmp_path):
+    sleep = _fixture_sleep(tmp_path)
+    nights = agenda_render.load_nights_from_parquet(sleep, None, "Europe/Paris")
+    html = agenda_render.render_html(
+        nights, subject_id="STEST", timezone_name="Europe/Paris",
+        theme="medical", interactive=True,
+    )
+    assert '<div id="night-modal">' in html
+    assert '<div id="night-snippet-modal">' in html
+    assert "night-save-btn" in html
+    assert "sleep_nights.yaml" in html
 
 
 def test_theme_css_rejects_unknown():
