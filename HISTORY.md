@@ -4,6 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Per-session sleep overrides — schema, agenda click-to-annotate, main_sleep_per_night respects user overrides | `src/n24sal/io/sleep_overrides.py`, `src/n24sal/sleep/per_night.py`, `tools/sleep_agenda/agenda_render.py`, `tests/test_sleep_overrides.py` | [`pending`](#2026-06-02-overrides) |
 | Fix wake-aggregation bug + n24sal.sleep.main_sleep_per_night helper | `src/n24sal/sleep/per_night.py`, `tests/test_sleep_per_night.py`, `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`a0b57d3`](#2026-06-02-a0b57d3) |
 | Notebook 04 — weekly pattern analysis (social entrainment leak detection) | `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`9e7d88c`](#2026-06-02-9e7d88c) |
 | Interactive sleep agenda + period selection + regime side-by-side (closes #11) | `tools/sleep_agenda/agenda_render.py`, `src/n24sal/io/periods.py`, `notebooks/03_personal_case.ipynb`, `tests/test_periods.py`, `tests/test_sleep_agenda.py` | [`1572be5`](#2026-06-02-1572be5) |
@@ -30,6 +31,15 @@
 ---
 
 ## Changelog
+
+### 2026-06-02 `pending`
+feat: per-session sleep overrides — schema + agenda click-to-annotate + main_sleep_per_night integration
+- **Why** : real-world data has cases the auto-detection can't solve — legitimate 15-22h catch-up sleeps (3 in S001 dataset !) that the longest-rule wrongly classifies as outliers, Samsung's over-merge of distinct biological sleeps, etc. User confirmed long sessions sont REAL et il faut un outil de revue manuelle, pas un fix algorithmique.
+- `src/n24sal/io/sleep_overrides.py` — schéma Pydantic `SleepOverride` (date + sleep_id + action ∈ {set_main, mark_as_nap, exclude} + notes) + `SleepOverridesFile` (subject_id + overrides) + helpers `load_sleep_overrides()` / `dump_sleep_overrides()`. Format YAML accepte aussi liste pure (ergonomie : user paste snippets de l'agenda sans wrapper).
+- `src/n24sal/sleep/per_night.py` — `main_sleep_per_night()` accepte un param optionnel `overrides: SleepOverridesFile | None`. Actions appliquées : `exclude` drop la session entièrement (pas en TST), `mark_as_nap` la garde dans TST mais elle ne peut pas être main, `set_main` la force comme main et réassigne la nuit à la date user (ignore le midpoint).
+- `tools/sleep_agenda/agenda_render.py` — chaque session est un block visible distinct avec `data-sleep-id` + `data-night` + `data-start-ms` / `data-end-ms` ; tooltip avec session-index, stage, sleep_id court, durée. Theme `datasaillance` colore par session-index dans la nuit (teal #1, amber #2, cyan #3, grey #4+). Theme `medical` garde l'orange uniforme avec séparateur fin entre blocks. Click sur block → modal annotation (sleep_id + nuit + timing) avec 3 boutons (Set as main / Mark as nap / Exclude) + textarea notes → snippet YAML copiable à coller dans `sleep_sessions.yaml`.
+- Tests : `tests/test_sleep_overrides.py` (8 tests : Pydantic validation, duplicate detection, YAML roundtrip, list-form parsing, edge cases) + extensions à `test_sleep_per_night.py` (5 tests : exclude / mark_as_nap / set_main / reassign night / unknown id) + extensions à `test_sleep_agenda.py` (3 tests : data attrs présents, modals présents, sleep_id dans stages). Total 120 GREEN
+- **Smoke test S001** : agenda 843 nuits rendu (`/mnt/c/Users/idsmf/Desktop/agenda_n24sal_session_annot.html`, 2.7 MB), 40 420 blocks sleep cliquables avec attributs annotation prêts.
 
 ### 2026-06-02 `a0b57d3`
 fix(sleep): proper per-night aggregation via sleep_id + midpoint night assignment

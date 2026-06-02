@@ -114,6 +114,46 @@ def test_render_html_non_interactive_strips_js(tmp_path):
     assert "save-btn" not in html  # JS-only id
 
 
+def test_render_html_includes_session_attributes(tmp_path):
+    """Each rendered .sleep block must carry data-sleep-id + data-night + data-start-ms attrs."""
+    sleep = _fixture_sleep(tmp_path)
+    nights = agenda_render.load_nights_from_parquet(sleep, None, "Europe/Paris")
+    html = agenda_render.render_html(
+        nights, subject_id="STEST", timezone_name="Europe/Paris",
+        theme="datasaillance", interactive=True,
+    )
+    assert "data-sleep-id=" in html
+    assert "data-night=" in html
+    assert "data-start-ms=" in html
+    # Session-index CSS class applied
+    assert "sess-0" in html  # at least one session
+
+
+def test_render_html_session_modal_present_in_interactive(tmp_path):
+    sleep = _fixture_sleep(tmp_path)
+    nights = agenda_render.load_nights_from_parquet(sleep, None, "Europe/Paris")
+    html = agenda_render.render_html(
+        nights, subject_id="STEST", timezone_name="Europe/Paris",
+        theme="medical", interactive=True,
+    )
+    assert '<div id="session-modal">' in html
+    assert '<div id="session-snippet-modal">' in html
+    assert 'data-action="set_main"' in html
+    assert 'data-action="mark_as_nap"' in html
+    assert 'data-action="exclude"' in html
+
+
+def test_load_nights_includes_sleep_id_in_stages(tmp_path):
+    """Backwards-incompat change : stages now 4-tuples (stage_name, s_ms, e_ms, sleep_id)."""
+    sleep = _fixture_sleep(tmp_path)
+    nights = agenda_render.load_nights_from_parquet(sleep, None, "Europe/Paris")
+    assert nights, "expected non-empty nights"
+    for n in nights:
+        for stage in n["stages"]:
+            assert len(stage) == 4
+            assert isinstance(stage[3], str)  # sleep_id
+
+
 def test_theme_css_rejects_unknown():
     with pytest.raises(ValueError, match="unknown theme"):
         agenda_render.theme_css("neon")

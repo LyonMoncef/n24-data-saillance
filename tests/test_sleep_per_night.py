@@ -135,3 +135,102 @@ def test_custom_awake_label():
     res = main_sleep_per_night(df, timezone="Europe/Paris", awake_label="wake")
     night = pd.Timestamp("2025-04-07").date()
     assert abs(res.loc[night, "main_duration_h"] - 7.0) < 0.01
+
+
+# -------------------- Manual overrides --------------------
+
+
+from datetime import date as _date
+
+from n24sal.io.sleep_overrides import SleepOverride, SleepOverridesFile
+
+
+def test_override_exclude_drops_session_from_tst():
+    """A short nap and a real main sleep ; exclude the main, TST drops accordingly."""
+    df = _df(
+        [
+            ("2025-04-06 23:30", "2025-04-07 06:30", "DEEP", "MAIN"),
+            ("2025-04-07 14:00", "2025-04-07 15:00", "LIGHT", "NAP"),
+        ]
+    )
+    overrides = SleepOverridesFile(
+        subject_id="S001",
+        overrides=[SleepOverride(date=_date(2025, 4, 7), sleep_id="MAIN", action="exclude")],
+    )
+    res = main_sleep_per_night(df, timezone="Europe/Paris", overrides=overrides)
+    night = _date(2025, 4, 7)
+    # MAIN excluded → only NAP remains → main = NAP (by default longest of remaining)
+    assert res.loc[night, "n_sessions"] == 1
+    assert abs(res.loc[night, "tst_h"] - 1.0) < 0.01
+    assert abs(res.loc[night, "main_duration_h"] - 1.0) < 0.01
+
+
+def test_override_mark_as_nap_keeps_session_in_tst_but_not_main():
+    """A 2h evening session before main ; mark it as nap → main = the 7h block, TST = sum."""
+    df = _df(
+        [
+            ("2025-04-06 19:30", "2025-04-06 21:30", "LIGHT", "EVENING_NAP"),
+            ("2025-04-06 23:30", "2025-04-07 06:30", "DEEP", "MAIN"),
+        ]
+    )
+    overrides = SleepOverridesFile(
+        subject_id="S001",
+        overrides=[
+            SleepOverride(date=_date(2025, 4, 7), sleep_id="EVENING_NAP", action="mark_as_nap")
+        ],
+    )
+    res = main_sleep_per_night(df, timezone="Europe/Paris", overrides=overrides)
+    night = _date(2025, 4, 7)
+    assert res.loc[night, "n_sessions"] == 2
+    assert abs(res.loc[night, "main_duration_h"] - 7.0) < 0.01
+    assert abs(res.loc[night, "tst_h"] - 9.0) < 0.01
+
+
+def test_override_set_main_forces_session_even_if_shorter():
+    """Two sessions ; user forces the SHORTER one as main."""
+    df = _df(
+        [
+            ("2025-04-06 22:00", "2025-04-07 06:00", "DEEP", "LONG"),
+            ("2025-04-07 14:00", "2025-04-07 15:30", "LIGHT", "SHORT"),
+        ]
+    )
+    overrides = SleepOverridesFile(
+        subject_id="S001",
+        overrides=[SleepOverride(date=_date(2025, 4, 7), sleep_id="SHORT", action="set_main")],
+    )
+    res = main_sleep_per_night(df, timezone="Europe/Paris", overrides=overrides)
+    night = _date(2025, 4, 7)
+    # The SHORT session is forced as main even though LONG is bigger
+    # But LONG is still on the same night (midpoint 02:00 → night 2025-04-07)
+    # So night 2025-04-07 has 2 sessions, main = SHORT (forced)
+    assert abs(res.loc[night, "main_duration_h"] - 1.5) < 0.01
+
+
+def test_override_set_main_reassigns_night_when_date_differs():
+    """A session whose midpoint puts it in night A, but user assigns it to night B."""
+    df = _df(
+        [
+            # Midpoint 02:00 on 2025-04-07 → night 2025-04-07
+            ("2025-04-06 22:00", "2025-04-07 06:00", "DEEP", "ORIG"),
+        ]
+    )
+    overrides = SleepOverridesFile(
+        subject_id="S001",
+        overrides=[SleepOverride(date=_date(2025, 4, 8), sleep_id="ORIG", action="set_main")],
+    )
+    res = main_sleep_per_night(df, timezone="Europe/Paris", overrides=overrides)
+    # User-specified night is 2025-04-08, midpoint would have said 2025-04-07
+    assert _date(2025, 4, 8) in res.index
+    assert _date(2025, 4, 7) not in res.index
+
+
+def test_override_unknown_sleep_id_is_ignored():
+    df = _df([("2025-04-06 23:00", "2025-04-07 06:00", "DEEP", "REAL")])
+    overrides = SleepOverridesFile(
+        subject_id="S001",
+        overrides=[SleepOverride(date=_date(2025, 4, 7), sleep_id="FAKE", action="set_main")],
+    )
+    res = main_sleep_per_night(df, timezone="Europe/Paris", overrides=overrides)
+    night = _date(2025, 4, 7)
+    # FAKE doesn't match anything ; REAL is still picked as main by default rule
+    assert abs(res.loc[night, "main_duration_h"] - 7.0) < 0.01
