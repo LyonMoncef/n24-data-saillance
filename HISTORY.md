@@ -4,7 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
-| Interactive sleep agenda + period selection + regime side-by-side (closes #11) | `tools/sleep_agenda/agenda_render.py`, `src/n24sal/io/periods.py`, `notebooks/03_personal_case.ipynb`, `tests/test_periods.py`, `tests/test_sleep_agenda.py` | [`pending`](#2026-06-02-issue11) |
+| Interactive sleep agenda + period selection + regime side-by-side (closes #11) | `tools/sleep_agenda/agenda_render.py`, `src/n24sal/io/periods.py`, `notebooks/03_personal_case.ipynb`, `tests/test_periods.py`, `tests/test_sleep_agenda.py` | [`1572be5`](#2026-06-02-1572be5) |
 | Densify Samsung ingest + present column + tau coverage filter (closes #8) | `src/n24sal/io/samsung.py`, `src/n24sal/io/schemas.py`, `src/n24sal/npcra/tau.py`, `notebooks/03_personal_case.ipynb`, `PROTOCOL.md` | [`c5245fa`](#2026-06-01-c5245fa) |
 | Fix investigate_tau script (tz-aware reindex + day truncate) | `scripts/investigate_tau.py` | [`adbf89a`](#2026-06-01-adbf89a) |
 | Diagnostic script for tau on real data | `scripts/investigate_tau.py` | [`ed40e87`](#2026-06-01-ed40e87) |
@@ -29,7 +29,7 @@
 
 ## Changelog
 
-### 2026-06-02 `pending` — closes #11
+### 2026-06-02 `1572be5` — closes #11
 feat: interactive sleep agenda + visual period selection + regime side-by-side analysis
 - `tools/sleep_agenda/agenda_render.py` — port Centre ChronoS Bichat-Beaujon depuis SamsungHealth, adapté pour `sleep_intervals.parquet` + `activity.parquet`
 - Deux thèmes via `--theme {medical, datasaillance}` — médical print-A3 (cellules orange `#f0b878` sur fond blanc, accent teal) vs DataSaillance dark (cellules teal sur `#191e22`, accent amber)
