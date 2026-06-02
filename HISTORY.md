@@ -4,7 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
-| Per-session sleep overrides — schema, agenda click-to-annotate, main_sleep_per_night respects user overrides | `src/n24sal/io/sleep_overrides.py`, `src/n24sal/sleep/per_night.py`, `tools/sleep_agenda/agenda_render.py`, `tests/test_sleep_overrides.py` | [`pending`](#2026-06-02-overrides) |
+| Per-session sleep overrides — schema, agenda click-to-annotate, main_sleep_per_night respects user overrides | `src/n24sal/io/sleep_overrides.py`, `src/n24sal/sleep/per_night.py`, `tools/sleep_agenda/agenda_render.py`, `tests/test_sleep_overrides.py` | [`6c99866`](#2026-06-02-6c99866) |
 | Fix wake-aggregation bug + n24sal.sleep.main_sleep_per_night helper | `src/n24sal/sleep/per_night.py`, `tests/test_sleep_per_night.py`, `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`a0b57d3`](#2026-06-02-a0b57d3) |
 | Notebook 04 — weekly pattern analysis (social entrainment leak detection) | `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`9e7d88c`](#2026-06-02-9e7d88c) |
 | Interactive sleep agenda + period selection + regime side-by-side (closes #11) | `tools/sleep_agenda/agenda_render.py`, `src/n24sal/io/periods.py`, `notebooks/03_personal_case.ipynb`, `tests/test_periods.py`, `tests/test_sleep_agenda.py` | [`1572be5`](#2026-06-02-1572be5) |
@@ -32,7 +32,7 @@
 
 ## Changelog
 
-### 2026-06-02 `pending`
+### 2026-06-02 `6c99866`
 feat: per-session sleep overrides — schema + agenda click-to-annotate + main_sleep_per_night integration
 - **Why** : real-world data has cases the auto-detection can't solve — legitimate 15-22h catch-up sleeps (3 in S001 dataset !) that the longest-rule wrongly classifies as outliers, Samsung's over-merge of distinct biological sleeps, etc. User confirmed long sessions sont REAL et il faut un outil de revue manuelle, pas un fix algorithmique.
 - `src/n24sal/io/sleep_overrides.py` — schéma Pydantic `SleepOverride` (date + sleep_id + action ∈ {set_main, mark_as_nap, exclude} + notes) + `SleepOverridesFile` (subject_id + overrides) + helpers `load_sleep_overrides()` / `dump_sleep_overrides()`. Format YAML accepte aussi liste pure (ergonomie : user paste snippets de l'agenda sans wrapper).
