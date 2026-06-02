@@ -4,6 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Interactive sleep agenda + period selection + regime side-by-side (closes #11) | `tools/sleep_agenda/agenda_render.py`, `src/n24sal/io/periods.py`, `notebooks/03_personal_case.ipynb`, `tests/test_periods.py`, `tests/test_sleep_agenda.py` | [`pending`](#2026-06-02-issue11) |
 | Densify Samsung ingest + present column + tau coverage filter (closes #8) | `src/n24sal/io/samsung.py`, `src/n24sal/io/schemas.py`, `src/n24sal/npcra/tau.py`, `notebooks/03_personal_case.ipynb`, `PROTOCOL.md` | [`c5245fa`](#2026-06-01-c5245fa) |
 | Fix investigate_tau script (tz-aware reindex + day truncate) | `scripts/investigate_tau.py` | [`adbf89a`](#2026-06-01-adbf89a) |
 | Diagnostic script for tau on real data | `scripts/investigate_tau.py` | [`ed40e87`](#2026-06-01-ed40e87) |
@@ -27,6 +28,23 @@
 ---
 
 ## Changelog
+
+### 2026-06-02 `pending` — closes #11
+feat: interactive sleep agenda + visual period selection + regime side-by-side analysis
+- `tools/sleep_agenda/agenda_render.py` — port Centre ChronoS Bichat-Beaujon depuis SamsungHealth, adapté pour `sleep_intervals.parquet` + `activity.parquet`
+- Deux thèmes via `--theme {medical, datasaillance}` — médical print-A3 (cellules orange `#f0b878` sur fond blanc, accent teal) vs DataSaillance dark (cellules teal sur `#191e22`, accent amber)
+- Coverage overlay : barre fine colorée sous le date label, gradient rouge→vert selon % de present epochs sur la fenêtre 20h→20h
+- JS vanilla drag-to-select sur la colonne date : panneau flottant live (start/end/n_nights/mean coverage), modal "Save period (YAML)" avec snippet + clipboard copy → user paste dans `periods.yaml`
+- CLI multi-user-ready : `--subject-id`, `--data-dir`, `--timezone`, `--out`, `--non-interactive` (drop JS pour export print propre)
+- `src/n24sal/io/periods.py` — schéma Pydantic `PeriodDef` + `PeriodsFile`, validation nom regex `^[a-z0-9_]+$`, unicité, dates ordonnées ; helpers `load_periods()` / `dump_periods()`
+- `notebooks/03_personal_case.ipynb` — nouvelle section "7. Regime analysis" lit `periods.yaml` si présent, calcule NPCRA + tau bootstrap CI par période + full dataset baseline, rend un tableau comparison side-by-side
+- `pyyaml>=6.0` ajouté aux dépendances base
+- Tests : `tests/test_periods.py` (10 tests : Pydantic validation, YAML roundtrip, edge cases) + `tests/test_sleep_agenda.py` (7 tests : load_nights_from_parquet, rendu HTML 2 thèmes, non-interactive strip JS, CLI end-to-end). Total 95 GREEN
+- **Smoke test sur S001 réelles** : agenda 843 nuits rendu en 2.7 MB (sleep_stage data remonte 2023+, > 517 jours movement). Trois régimes identifiés via la procédure :
+  - full dataset (495 jours filtrés) : tau=24.417h R²=0.871
+  - regime_homogeneous_2026_q2 (49 jours) : tau=**25.023h** R²=0.849 — N24 textbook
+  - slice_6_months (135 jours) : tau=23.990h R²=**0.001** — confirme superposition de régimes
+- Origin du renderer crédité dans le header (`SamsungHealth/tools/sleep_agenda/`)
 
 ### 2026-06-01 `c5245fa` — closes #8
 feat: densify Samsung ingest + present column + tau coverage filter

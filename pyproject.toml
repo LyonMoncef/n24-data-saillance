@@ -37,6 +37,7 @@ dependencies = [
     "pydantic>=2.5",
     "python-dateutil>=2.8",
     "plotly>=5.18",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
