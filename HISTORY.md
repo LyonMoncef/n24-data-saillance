@@ -4,7 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
-| Fix wake-aggregation bug + n24sal.sleep.main_sleep_per_night helper | `src/n24sal/sleep/per_night.py`, `tests/test_sleep_per_night.py`, `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`pending`](#2026-06-02-wake-fix) |
+| Fix wake-aggregation bug + n24sal.sleep.main_sleep_per_night helper | `src/n24sal/sleep/per_night.py`, `tests/test_sleep_per_night.py`, `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`a0b57d3`](#2026-06-02-a0b57d3) |
 | Notebook 04 — weekly pattern analysis (social entrainment leak detection) | `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`9e7d88c`](#2026-06-02-9e7d88c) |
 | Interactive sleep agenda + period selection + regime side-by-side (closes #11) | `tools/sleep_agenda/agenda_render.py`, `src/n24sal/io/periods.py`, `notebooks/03_personal_case.ipynb`, `tests/test_periods.py`, `tests/test_sleep_agenda.py` | [`1572be5`](#2026-06-02-1572be5) |
 | Densify Samsung ingest + present column + tau coverage filter (closes #8) | `src/n24sal/io/samsung.py`, `src/n24sal/io/schemas.py`, `src/n24sal/npcra/tau.py`, `notebooks/03_personal_case.ipynb`, `PROTOCOL.md` | [`c5245fa`](#2026-06-01-c5245fa) |
@@ -31,7 +31,7 @@
 
 ## Changelog
 
-### 2026-06-02 `pending`
+### 2026-06-02 `a0b57d3`
 fix(sleep): proper per-night aggregation via sleep_id + midpoint night assignment
 - `src/n24sal/sleep/per_night.py` — nouveau module `main_sleep_per_night(sleep_intervals, timezone)` qui identifie la **session sommeil principale** par nuit via grouping sur `sleep_id` (canonical Samsung), assignment par midpoint (robuste aux sessions longues qui chevauchent la frontière 20h ET aux siestes du jour suivant), longest session = main sleep, retourne `main_onset`, `main_offset`, `main_duration_h`, `n_sessions`, `tst_h` (total sleep time = somme de toutes les sessions de la nuit)
 - `tests/test_sleep_per_night.py` — 8 tests couvrant empty input, only-AWAKE, single simple night, main = longest (pas first), late-afternoon-start assigned by midpoint, AWAKE excluded, multi-night sorting, custom awake_label
