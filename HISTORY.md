@@ -4,7 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
-| Notebook 04 — weekly pattern analysis (social entrainment leak detection) | `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`pending`](#2026-06-02-nb04) |
+| Notebook 04 — weekly pattern analysis (social entrainment leak detection) | `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`9e7d88c`](#2026-06-02-9e7d88c) |
 | Interactive sleep agenda + period selection + regime side-by-side (closes #11) | `tools/sleep_agenda/agenda_render.py`, `src/n24sal/io/periods.py`, `notebooks/03_personal_case.ipynb`, `tests/test_periods.py`, `tests/test_sleep_agenda.py` | [`1572be5`](#2026-06-02-1572be5) |
 | Densify Samsung ingest + present column + tau coverage filter (closes #8) | `src/n24sal/io/samsung.py`, `src/n24sal/io/schemas.py`, `src/n24sal/npcra/tau.py`, `notebooks/03_personal_case.ipynb`, `PROTOCOL.md` | [`c5245fa`](#2026-06-01-c5245fa) |
 | Fix investigate_tau script (tz-aware reindex + day truncate) | `scripts/investigate_tau.py` | [`adbf89a`](#2026-06-01-adbf89a) |
@@ -30,7 +30,7 @@
 
 ## Changelog
 
-### 2026-06-02 `pending`
+### 2026-06-02 `9e7d88c`
 feat(notebooks): weekly pattern analysis — social entrainment leak detection
 - `notebooks/04_regime_atcf_weekly_pattern.ipynb` — template paramétrable (`PERIOD_NAME` au top, défaut `regime_atcf`) qui dissèque une période sous régime travail-semaine en cinq analyses :
   1. Profile 24h activité weekday vs weekend (overlay deux courbes)
