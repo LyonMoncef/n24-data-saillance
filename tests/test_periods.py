@@ -127,3 +127,29 @@ def test_load_periods_minimal_file(tmp_path):
     assert pf.subject_id == "S001"
     assert pf.timezone == "Europe/Paris"  # default
     assert pf.periods == []
+
+
+def test_load_periods_list_form_infers_subject_from_parent_dir(tmp_path):
+    """Users often paste raw JS snippets producing a top-level list. Accept it,
+    infer subject_id from the parent dir name."""
+    subj_dir = tmp_path / "S001"
+    subj_dir.mkdir()
+    p = subj_dir / "periods.yaml"
+    p.write_text(
+        """\
+- name: regime_a
+  start: 2026-03-16
+  end: 2026-05-06
+  notes: "Stable"
+- name: regime_b
+  start: 2025-11-29
+  end: 2026-04-21
+  notes: ""
+""",
+        encoding="utf-8",
+    )
+    pf = load_periods(p)
+    assert pf.subject_id == "S001"  # inferred from parent dir
+    assert pf.timezone == "Europe/Paris"  # default
+    assert len(pf.periods) == 2
+    assert pf.get("regime_a").notes == "Stable"

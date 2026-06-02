@@ -429,9 +429,13 @@ _SELECTION_JS = """
     const hi = Math.max(startIdx, endIdx);
     const startD = rows[lo].dataset.date;
     const endD = rows[hi].dataset.date;
-    let name = prompt('Nom de la période (a-z, 0-9, underscore uniquement) :', 'regime_');
+    let name = prompt('Nom de la période (accents OK, transformés automatiquement) :', 'regime_');
     if (!name) return;
-    name = name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    name = name.trim().toLowerCase()
+      .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')   // strip diacritics (é → e)
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
     const notes = prompt('Notes (optionnel) :', '') || '';
     const yaml = `  - name: ${name}\\n    start: ${startD}\\n    end: ${endD}\\n    notes: "${notes.replace(/"/g, '\\\\"')}"`;
     document.querySelector('#snippet-modal pre').textContent = yaml;

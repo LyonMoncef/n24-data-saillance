@@ -69,10 +69,24 @@ class PeriodsFile(BaseModel):
 
 
 def load_periods(yaml_path: Path) -> PeriodsFile:
-    """Parse + validate a ``periods.yaml`` file."""
+    """Parse + validate a ``periods.yaml`` file.
+
+    Accepts two top-level forms for ergonomics — users often paste raw snippets
+    from the sleep agenda without realising they need a wrapper :
+
+    - **Full form** : dict with ``subject_id``, ``timezone``, ``periods`` keys
+    - **List-only form** : a YAML list of period dicts ; ``subject_id`` is
+      inferred from the parent directory name (e.g. ``data/personal/S001/`` →
+      ``S001``), ``timezone`` defaults to ``Europe/Paris``
+    """
     raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
     if raw is None:
         raise ValueError(f"{yaml_path} is empty")
+    if isinstance(raw, list):
+        parent = yaml_path.resolve().parent
+        # data/personal/<subject>/periods.yaml → subject = parent name
+        subject_id = parent.name if parent.name not in ("", "/") else "unknown"
+        raw = {"subject_id": subject_id, "periods": raw}
     return PeriodsFile.model_validate(raw)
 
 
