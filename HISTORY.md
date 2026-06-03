@@ -4,6 +4,7 @@
 
 | Feature | Files | Commit |
 |---------|-------|--------|
+| Per-night biological boundaries — schema, two-click agenda UX, per_night honors boundaries | `src/n24sal/io/sleep_nights.py`, `src/n24sal/sleep/per_night.py`, `tools/sleep_agenda/agenda_render.py`, `tests/test_sleep_nights.py` | [`563e610`](#2026-06-03-563e610) |
 | Fix wake-aggregation bug + n24sal.sleep.main_sleep_per_night helper | `src/n24sal/sleep/per_night.py`, `tests/test_sleep_per_night.py`, `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`a0b57d3`](#2026-06-02-a0b57d3) |
 | Notebook 04 — weekly pattern analysis (social entrainment leak detection) | `notebooks/04_regime_atcf_weekly_pattern.ipynb` | [`9e7d88c`](#2026-06-02-9e7d88c) |
 | Interactive sleep agenda + period selection + regime side-by-side (closes #11) | `tools/sleep_agenda/agenda_render.py`, `src/n24sal/io/periods.py`, `notebooks/03_personal_case.ipynb`, `tests/test_periods.py`, `tests/test_sleep_agenda.py` | [`1572be5`](#2026-06-02-1572be5) |
@@ -30,6 +31,15 @@
 ---
 
 ## Changelog
+
+### 2026-06-03 `563e610`
+feat: per-night biological boundaries (replaces closed PR #15 per-session approach)
+- **Pivot du modèle** : abandon de l'approche per-session role-tagging (PR #15 closed) au profit de **per-night boundary definition**. User a clarifié que son besoin est de **définir manuellement bedtime + waketime d'une nuit biologique** (potentiellement multi-session côté Samsung, potentiellement traversant le 20h boundary), pas de tagger des sessions individuelles.
+- `src/n24sal/io/sleep_nights.py` — schéma Pydantic `NightBoundary` (date canonique + start tz-aware + end tz-aware + notes optionnelles) + `SleepNightsFile` (subject_id + timezone + nights). Validation : end > start, fenêtre ≤ 30h (les plus longs catch-up doc en lit = ~22h), datetimes tz-aware obligatoires, uniqueness par date.
+- `src/n24sal/sleep/per_night.py` — `main_sleep_per_night()` accepte param optionnel `night_boundaries: SleepNightsFile | None`. Pour chaque nuit user-définie : main_onset/offset = user start/end, main_duration_h = wall time, tst_h = somme des stages non-AWAKE clippées au window, n_sessions = count de sleep_id overlapping. Les sessions "consommées" par une nuit user-définie sont retirées de l'auto-détection (pas de double-comptage).
+- `tools/sleep_agenda/agenda_render.py` — chaque session est un block visible distinct avec `data-sleep-id` + `data-start-local` + `data-end-local` + `data-night` (ISO local avec offset). Theme `datasaillance` colore par session-index (teal/amber/cyan/grey cyclique). Theme `medical` garde l'orange uniforme. **UX deux clics** : click sur bloc 1 = bedtime (highlight ambre), click sur bloc 2 = waketime (highlight vert), panneau live affiche start/end/durée, bouton "Save night" → modal avec date canonique pré-remplie + notes → snippet YAML copiable pour `sleep_nights.yaml`.
+- Tests : `tests/test_sleep_nights.py` (9 tests : Pydantic validation, datetime tz-aware, duplicate dates, YAML roundtrip, list-form parsing, edge cases) + extensions à `test_sleep_per_night.py` (4 tests : user replaces auto, two-night mix user+auto, session consumption no double-count, empty-window user night still reported) + extensions à `test_sleep_agenda.py` (data-*-local attrs présents, night-modal présent). Total 119 GREEN
+- **Smoke test S001** : agenda 843 nuits rendu sur Desktop (`agenda_n24sal_night_select.html`), 40 420 blocks cliquables avec ISO local datetimes prêts pour two-click selection.
 
 ### 2026-06-02 `a0b57d3`
 fix(sleep): proper per-night aggregation via sleep_id + midpoint night assignment
